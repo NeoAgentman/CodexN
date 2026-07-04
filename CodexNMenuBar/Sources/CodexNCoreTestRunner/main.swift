@@ -11,7 +11,6 @@ struct TestRunner {
         try rejectsInvalidAPIKeyProviderID()
         try buildsLaunchCommandsWithProfileIsolation()
         try injectsAPIKeyEnvironmentIntoLaunchCommands()
-        try buildsTerminalAppleScriptWithoutInvalidSlashEscapes()
         try readsLegacyProfileRegistry()
         try buildsDefaultLaunchCommandsWithoutProfileIsolation()
         print("CodexNCoreTestRunner: all tests passed")
@@ -159,11 +158,6 @@ struct TestRunner {
             desktopArguments.contains("--user-data-dir=\(profile.electronUserData.path)"),
             "desktop args should include chromium user data dir"
         )
-
-        let terminalScript = launcher.terminalScript(profile: profile)
-        try expect(terminalScript.contains("export CODEX_HOME="), "terminal script should export CODEX_HOME")
-        try expect(terminalScript.contains("export CODEX_ELECTRON_USER_DATA_PATH="), "terminal script should export electron user data")
-        try expect(terminalScript.hasSuffix("; codex"), "terminal script should run codex")
     }
 
     private static func injectsAPIKeyEnvironmentIntoLaunchCommands() throws {
@@ -188,25 +182,6 @@ struct TestRunner {
             desktopArguments.firstIndex(of: "\(envName)=sk-test secret")! < desktopArguments.firstIndex(of: "--args")!,
             "desktop API key env should appear before --args"
         )
-
-        let terminalScript = launcher.terminalScript(profile: profile)
-        try expect(
-            terminalScript.contains("export \(envName)='sk-test secret'"),
-            "terminal script should export API key env"
-        )
-    }
-
-    private static func buildsTerminalAppleScriptWithoutInvalidSlashEscapes() throws {
-        let root = try temporaryDirectory()
-        let store = ProfileStore(root: root)
-        let profile = try store.createProfile(id: "work", name: "Work")
-        let launcher = Launcher()
-
-        let appleScript = launcher.terminalAppleScript(profile: profile)
-
-        try expect(appleScript.contains("tell application \"Terminal\" to do script"), "should target Terminal")
-        try expect(!appleScript.contains("\\/"), "AppleScript should not use JSON-style slash escapes")
-        try expect(appleScript.contains("/codex-home"), "AppleScript should include the profile codex home path")
     }
 
     private static func readsLegacyProfileRegistry() throws {
@@ -244,9 +219,6 @@ struct TestRunner {
         try expect(desktopArguments == ["-n", "/Applications/Codex.app"], "default desktop should not include profile env")
         try expect(!desktopArguments.contains(where: { $0.contains("CODEX_HOME") }), "default desktop should not include CODEX_HOME")
         try expect(!desktopArguments.contains(where: { $0.contains("user-data-dir") }), "default desktop should not include user-data-dir")
-
-        let terminalScript = launcher.defaultTerminalScript(cwd: URL(filePath: "/tmp"))
-        try expect(terminalScript == "cd '/tmp'; codex", "default CLI should run codex without profile env")
     }
 
     private static func expect(_ condition: @autoclosure () throws -> Bool, _ message: String) throws {

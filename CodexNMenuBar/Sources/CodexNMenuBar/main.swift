@@ -87,15 +87,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     private func originMenu() -> NSMenu {
         let menu = NSMenu()
-        menu.addItem(menuItem("Open Desktop", symbol: "macwindow", action: #selector(openOriginDesktop)))
-        menu.addItem(menuItem("Open CLI", symbol: "terminal", action: #selector(openOriginCLI)))
+        menu.addItem(menuItem("Open Codex App", symbol: "macwindow", action: #selector(openOriginDesktop)))
         return menu
     }
 
     private func profileMenu(_ profile: Profile) -> NSMenu {
         let menu = NSMenu()
-        menu.addItem(profileMenuItem("Open Desktop", symbol: "macwindow", action: #selector(openDesktop(_:)), profileID: profile.id))
-        menu.addItem(profileMenuItem("Open CLI", symbol: "terminal", action: #selector(openCLI(_:)), profileID: profile.id))
+        menu.addItem(profileMenuItem("Open Codex App", symbol: "macwindow", action: #selector(openDesktop(_:)), profileID: profile.id))
         menu.addItem(.separator())
         menu.addItem(profileMenuItem("Backup", symbol: "archivebox", action: #selector(backupProfile(_:)), profileID: profile.id))
         menu.addItem(profileMenuItem("Remove...", symbol: "minus.circle", action: #selector(removeProfile(_:)), profileID: profile.id))
@@ -177,19 +175,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         runMenuAction { try launcher.openDefaultDesktop() }
     }
 
-    @objc private func openOriginCLI() {
-        runMenuAction { try launcher.openDefaultCLIInTerminal() }
-    }
-
     @objc private func openDesktop(_ sender: NSMenuItem) {
         withProfile(sender) { profile in
             try launcher.openDesktop(profile: profile)
-        }
-    }
-
-    @objc private func openCLI(_ sender: NSMenuItem) {
-        withProfile(sender) { profile in
-            try launcher.openCLIInTerminal(profile: profile)
         }
     }
 

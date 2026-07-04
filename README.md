@@ -4,7 +4,7 @@ CodexN is a native macOS menu bar launcher for running multiple isolated Codex e
 
 It provides:
 
-- a Swift menu bar app for opening Codex Desktop or CLI profiles
+- a Swift menu bar app for opening isolated Codex app profiles
 - isolated `CODEX_HOME` and Electron user-data directories per profile
 - an `origin` entry for launching the normal system Codex environment
 - Settings for adding profiles and controlling app startup behavior
@@ -58,7 +58,7 @@ The menu bar app supports:
 - creating empty login profiles
 - importing the current default Codex profile
 - creating custom API-key profiles
-- launching Codex Desktop and CLI for each profile
+- launching the Codex app for each profile
 - backing up or removing profile registry entries
 - enabling or disabling launch at login from Settings
 

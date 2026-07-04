@@ -43,48 +43,12 @@ public struct Launcher {
         return arguments
     }
 
-    public func terminalScript(profile: Profile, cwd: URL = FileManager.default.homeDirectoryForCurrentUser) -> String {
-        var commands = [
-            "cd \(shellQuote(cwd.path))",
-            "export CODEX_HOME=\(shellQuote(profile.codexHome.path))",
-            "export CODEX_ELECTRON_USER_DATA_PATH=\(shellQuote(profile.electronUserData.path))"
-        ]
-        if let apiKeyEnvironment = apiKeyEnvironment(profile) {
-            commands.append("export \(apiKeyEnvironment.name)=\(shellQuote(apiKeyEnvironment.value))")
-        }
-        commands.append("codex")
-        return commands.joined(separator: "; ")
-    }
-
-    public func defaultTerminalScript(cwd: URL = FileManager.default.homeDirectoryForCurrentUser) -> String {
-        [
-            "cd \(shellQuote(cwd.path))",
-            "codex"
-        ].joined(separator: "; ")
-    }
-
-    public func terminalAppleScript(profile: Profile) -> String {
-        "tell application \"Terminal\" to do script \(appleScriptStringLiteral(terminalScript(profile: profile)))"
-    }
-
-    public func defaultTerminalAppleScript() -> String {
-        "tell application \"Terminal\" to do script \(appleScriptStringLiteral(defaultTerminalScript()))"
-    }
-
     public func openDesktop(profile: Profile) throws {
         try run("/usr/bin/open", arguments: desktopOpenArguments(profile: profile))
     }
 
     public func openDefaultDesktop() throws {
         try run("/usr/bin/open", arguments: defaultDesktopOpenArguments())
-    }
-
-    public func openCLIInTerminal(profile: Profile) throws {
-        try run("/usr/bin/osascript", arguments: ["-e", terminalAppleScript(profile: profile)])
-    }
-
-    public func openDefaultCLIInTerminal() throws {
-        try run("/usr/bin/osascript", arguments: ["-e", defaultTerminalAppleScript()])
     }
 
     private func run(_ executable: String, arguments: [String]) throws {
@@ -103,15 +67,4 @@ private func apiKeyEnvironment(_ profile: Profile) -> (name: String, value: Stri
     guard let name = profile.apiKeyEnvName, !name.isEmpty else { return nil }
     guard let value = profile.apiKeyValue, !value.isEmpty else { return nil }
     return (name, value)
-}
-
-private func shellQuote(_ value: String) -> String {
-    "'\(value.replacingOccurrences(of: "'", with: "'\\''"))'"
-}
-
-private func appleScriptStringLiteral(_ value: String) -> String {
-    let escaped = value
-        .replacingOccurrences(of: "\\", with: "\\\\")
-        .replacingOccurrences(of: "\"", with: "\\\"")
-    return "\"\(escaped)\""
 }
