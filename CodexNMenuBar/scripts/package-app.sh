@@ -5,7 +5,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 APP="$ROOT/CodexN.app"
 EXECUTABLE="$ROOT/.build/release/CodexNMenuBar"
 ICON="$ROOT/Assets/CodexN.icns"
-VERSION="${CODEXN_VERSION:-0.1.5}"
+VERSION="${CODEXN_VERSION:-0.1.6}"
 BUILD="${CODEXN_BUILD:-$(git -C "$ROOT" rev-list --count HEAD 2>/dev/null || echo 1)}"
 BUILD_DATE="${CODEXN_BUILD_DATE:-$(date -u "+%Y-%m-%d %H:%M:%S UTC")}"
 

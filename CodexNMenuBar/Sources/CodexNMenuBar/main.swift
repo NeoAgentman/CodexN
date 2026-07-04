@@ -56,10 +56,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(headerItem)
         menu.addItem(.separator())
 
-        let defaultCodex = NSMenuItem(title: "Default Codex", action: nil, keyEquivalent: "")
-        defaultCodex.image = NSImage(systemSymbolName: "house", accessibilityDescription: "Default Codex")
-        defaultCodex.submenu = defaultCodexMenu()
-        menu.addItem(defaultCodex)
+        menu.addItem(menuItem("Default Codex", symbol: "house", action: #selector(openDefaultCodexApp)))
 
         if let loadError {
             let errorItem = NSMenuItem(title: "Failed to load profiles", action: nil, keyEquivalent: "")
@@ -68,12 +65,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             menu.addItem(errorItem)
         } else {
             profiles.forEach { profile in
-                let item = NSMenuItem(title: profileMenuTitle(profile), action: nil, keyEquivalent: "")
+                let item = profileMenuItem(
+                    profileMenuTitle(profile),
+                    symbol: profile.apiKeyEnvName == nil ? "person.crop.circle" : "key",
+                    action: #selector(openDesktop(_:)),
+                    profileID: profile.id
+                )
                 item.image = NSImage(
                     systemSymbolName: profile.apiKeyEnvName == nil ? "person.crop.circle" : "key",
                     accessibilityDescription: profile.name
                 )
-                item.submenu = profileMenu(profile)
                 menu.addItem(item)
             }
         }
@@ -84,20 +85,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(.separator())
         menu.addItem(menuItem("About...", symbol: "info.circle", action: #selector(aboutFromMenu)))
         menu.addItem(menuItem("Quit", symbol: "xmark.rectangle", action: #selector(quitFromMenu)))
-    }
-
-    private func defaultCodexMenu() -> NSMenu {
-        let menu = NSMenu()
-        menu.addItem(menuItem("Open Codex App", symbol: "macwindow", action: #selector(openDefaultCodexApp)))
-        return menu
-    }
-
-    private func profileMenu(_ profile: Profile) -> NSMenu {
-        let menu = NSMenu()
-        menu.addItem(profileMenuItem("Open Codex App", symbol: "macwindow", action: #selector(openDesktop(_:)), profileID: profile.id))
-        menu.addItem(.separator())
-        menu.addItem(profileMenuItem("Remove...", symbol: "minus.circle", action: #selector(removeProfile(_:)), profileID: profile.id))
-        return menu
     }
 
     private func menuItem(_ title: String, symbol: String, action: Selector) -> NSMenuItem {
@@ -187,36 +174,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
     }
 
-    @objc private func removeProfile(_ sender: NSMenuItem) {
-        guard let id = sender.representedObject as? String else { return }
-        runMenuAction {
-            guard confirm(
-                title: "Remove Profile",
-                message: "Remove \(id) from CodexN? Files remain on disk."
-            ) else {
-                return
-            }
-            _ = try store.deleteProfile(id: id)
-            rebuildMenu()
-        }
-    }
-
     private func withProfile(_ sender: NSMenuItem, action: (Profile) throws -> Void) {
         guard let id = sender.representedObject as? String else { return }
         runMenuAction {
             try action(try store.getProfile(id: id))
         }
-    }
-
-    private func confirm(title: String, message: String) -> Bool {
-        let alert = NSAlert()
-        alert.messageText = title
-        alert.informativeText = message
-        alert.alertStyle = .warning
-        alert.addButton(withTitle: "Remove")
-        alert.addButton(withTitle: "Cancel")
-        NSApp.activate(ignoringOtherApps: true)
-        return alert.runModal() == .alertFirstButtonReturn
     }
 
     private func showError(_ error: Error) {
@@ -311,7 +273,6 @@ private final class SettingsWindowController: NSWindowController, NSWindowDelega
             onClose: { [weak self] in self?.close() },
             onComplete: { [weak self] in
                 self?.onComplete()
-                self?.close()
             }
         )
     }
@@ -356,7 +317,6 @@ private struct SettingsRootView: View {
     let onComplete: () -> Void
 
     @State private var selection: SettingsPane
-    @State private var columnVisibility: NavigationSplitViewVisibility = .doubleColumn
 
     init(
         store: ProfileStore,
@@ -372,41 +332,88 @@ private struct SettingsRootView: View {
     }
 
     var body: some View {
-        NavigationSplitView(columnVisibility: $columnVisibility) {
-            List(selection: $selection) {
-                Section("CodexN") {
-                    ForEach(SettingsPane.allCases) { pane in
-                        HStack(spacing: 9) {
-                            SettingsIconChip(systemImage: pane.symbol, color: pane.color)
-                            Text(pane.title)
-                        }
-                        .tag(pane)
-                    }
+        HStack(spacing: 0) {
+            settingsSidebar
+                .frame(width: 200)
+                .background(.bar)
+
+            Divider()
+
+            SettingsDetailPane(title: selection.title) {
+                switch selection {
+                case .general:
+                    GeneralSettingsPane()
+                case .profiles:
+                    ProfilesSettingsPane(
+                        store: store,
+                        onCancel: onClose,
+                        onProfilesChanged: onComplete
+                    )
+                case .about:
+                    AboutSettingsPane()
                 }
-            }
-            .listStyle(.sidebar)
-            .navigationSplitViewColumnWidth(min: 190, ideal: 200, max: 220)
-        } detail: {
-            switch selection {
-            case .general:
-                GeneralSettingsPane()
-                    .navigationTitle(SettingsPane.general.title)
-            case .profiles:
-                AddProfileView(
-                    store: store,
-                    onCancel: onClose,
-                    onComplete: onComplete
-                )
-                .navigationTitle(SettingsPane.profiles.title)
-            case .about:
-                AboutSettingsPane()
-                    .navigationTitle(SettingsPane.about.title)
             }
         }
         .frame(minWidth: 720, idealWidth: 780, minHeight: 480, idealHeight: 520)
         .onAppear {
-            columnVisibility = .doubleColumn
             selection = initialSelection
+        }
+    }
+
+    private var settingsSidebar: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text("CodexN")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 14)
+                .padding(.top, 14)
+                .padding(.bottom, 6)
+
+            ForEach(SettingsPane.allCases) { pane in
+                Button {
+                    selection = pane
+                } label: {
+                    HStack(spacing: 9) {
+                        SettingsIconChip(systemImage: pane.symbol, color: pane.color)
+                        Text(pane.title)
+                            .foregroundStyle(.primary)
+                        Spacer()
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 6)
+                    .background(
+                        RoundedRectangle(cornerRadius: 6, style: .continuous)
+                            .fill(selection == pane ? Color.accentColor.opacity(0.16) : Color.clear)
+                    )
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .padding(.horizontal, 8)
+            }
+
+            Spacer()
+        }
+    }
+}
+
+private struct SettingsDetailPane<Content: View>: View {
+    let title: String
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Text(title)
+                    .font(.title3.weight(.semibold))
+                Spacer()
+            }
+            .padding(.horizontal, 22)
+            .padding(.vertical, 16)
+
+            Divider()
+
+            content()
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }
 }
@@ -543,7 +550,7 @@ private struct AboutSettingsPane: View {
     }
 
     private var appVersion: String {
-        infoValue("CFBundleShortVersionString", fallback: "0.1.5")
+        infoValue("CFBundleShortVersionString", fallback: "0.1.6")
     }
 
     private var buildNumber: String {
@@ -596,11 +603,12 @@ private enum AddProfileSelection: String, CaseIterable, Identifiable {
     }
 }
 
-private struct AddProfileView: View {
+private struct ProfilesSettingsPane: View {
     let store: ProfileStore
     let onCancel: () -> Void
-    let onComplete: () -> Void
+    let onProfilesChanged: () -> Void
 
+    @State private var profiles: [Profile] = []
     @State private var selection: AddProfileSelection = .oauth
     @State private var id = ""
     @State private var name = ""
@@ -608,10 +616,46 @@ private struct AddProfileView: View {
     @State private var model = ""
     @State private var baseURL = ""
     @State private var apiKey = ""
+    @State private var pendingRemoval: Profile?
     @State private var errorMessage: String?
 
     var body: some View {
         Form {
+            Section("Profiles") {
+                if profiles.isEmpty {
+                    Text("No profiles")
+                        .foregroundStyle(.secondary)
+                } else {
+                    ForEach(profiles) { profile in
+                        HStack(spacing: 10) {
+                            SettingsIconChip(
+                                systemImage: profile.apiKeyEnvName == nil ? "person.crop.circle" : "key",
+                                color: profile.apiKeyEnvName == nil ? .blue : .orange
+                            )
+
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(profile.name)
+                                Text(profile.id)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+
+                            Spacer()
+
+                            Button {
+                                pendingRemoval = profile
+                            } label: {
+                                Image(systemName: "trash")
+                            }
+                            .buttonStyle(.borderless)
+                            .foregroundStyle(.red)
+                            .help("Remove Profile")
+                        }
+                        .padding(.vertical, 2)
+                    }
+                }
+            }
+
             Section("Add Profile") {
                 Picker(selection: $selection) {
                     ForEach(AddProfileSelection.allCases) { item in
@@ -674,6 +718,20 @@ private struct AddProfileView: View {
             }
         }
         .formStyle(.grouped)
+        .onAppear(perform: loadProfiles)
+        .alert("Remove Profile", isPresented: Binding(
+            get: { pendingRemoval != nil },
+            set: { if !$0 { pendingRemoval = nil } }
+        )) {
+            Button("Remove", role: .destructive) {
+                removePendingProfile()
+            }
+            Button("Cancel", role: .cancel) {
+                pendingRemoval = nil
+            }
+        } message: {
+            Text(removeConfirmationMessage)
+        }
         .alert("CodexN Error", isPresented: Binding(
             get: { errorMessage != nil },
             set: { if !$0 { errorMessage = nil } }
@@ -683,6 +741,20 @@ private struct AddProfileView: View {
             }
         } message: {
             Text(errorMessage ?? "")
+        }
+    }
+
+    private var removeConfirmationMessage: String {
+        guard let pendingRemoval else { return "" }
+        return "Remove \(pendingRemoval.id) from CodexN? Files remain on disk."
+    }
+
+    private func loadProfiles() {
+        do {
+            profiles = try store.listProfiles()
+        } catch {
+            profiles = []
+            errorMessage = String(describing: error)
         }
     }
 
@@ -705,10 +777,35 @@ private struct AddProfileView: View {
                     apiKey: apiKey
                 )
             }
-            onComplete()
+            resetAddForm()
+            loadProfiles()
+            onProfilesChanged()
         } catch {
             errorMessage = String(describing: error)
         }
+    }
+
+    private func removePendingProfile() {
+        guard let profile = pendingRemoval else { return }
+        do {
+            _ = try store.deleteProfile(id: profile.id)
+            pendingRemoval = nil
+            loadProfiles()
+            onProfilesChanged()
+        } catch {
+            pendingRemoval = nil
+            errorMessage = String(describing: error)
+        }
+    }
+
+    private func resetAddForm() {
+        id = ""
+        name = ""
+        provider = ""
+        model = ""
+        baseURL = ""
+        apiKey = ""
+        selection = .oauth
     }
 }
 
