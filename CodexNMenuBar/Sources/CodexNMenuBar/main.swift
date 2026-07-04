@@ -66,10 +66,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             errorItem.isEnabled = false
             errorItem.toolTip = loadError
             menu.addItem(errorItem)
-        } else if profiles.isEmpty {
-            let emptyItem = NSMenuItem(title: "No managed profiles", action: nil, keyEquivalent: "")
-            emptyItem.isEnabled = false
-            menu.addItem(emptyItem)
         } else {
             profiles.forEach { profile in
                 let item = NSMenuItem(title: profileMenuTitle(profile), action: nil, keyEquivalent: "")
@@ -134,9 +130,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     private func showSettingsWindow() {
         if let controller = settingsWindowController {
-            controller.showWindow(nil)
-            controller.window?.makeKeyAndOrderFront(nil)
-            NSApp.activate(ignoringOtherApps: true)
+            presentSettingsWindow(controller)
             return
         }
 
@@ -147,8 +141,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             self?.settingsWindowController = nil
         }
         settingsWindowController = controller
+        presentSettingsWindow(controller)
+    }
+
+    private func presentSettingsWindow(_ controller: SettingsWindowController) {
         controller.showWindow(nil)
-        controller.window?.center()
+        if let window = controller.window {
+            let screen = statusItem?.button?.window?.screen ?? window.screen ?? NSScreen.main
+            if let visibleFrame = screen?.visibleFrame {
+                window.setFrame(visibleFrame, display: true, animate: false)
+            } else {
+                window.center()
+            }
+            window.makeKeyAndOrderFront(nil)
+        }
         NSApp.activate(ignoringOtherApps: true)
     }
 
