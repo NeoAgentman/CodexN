@@ -7,6 +7,7 @@ struct TestRunner {
         try createsEmptyProfileDirectoriesWithoutCodexConfig()
         try refusesToCreateOverNonEmptyProfileDirectory()
         try importsDefaultCodexHomeAndElectronData()
+        try buildsLaunchCommandsWithProfileIsolation()
         print("CodexNCoreTestRunner: all tests passed")
     }
 
@@ -90,6 +91,29 @@ struct TestRunner {
             .appending(path: "codexn-menubar-tests-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
         return url
+    }
+
+    private static func buildsLaunchCommandsWithProfileIsolation() throws {
+        let root = try temporaryDirectory()
+        let store = ProfileStore(root: root)
+        let profile = try store.createProfile(id: "work", name: "Work")
+        let launcher = Launcher()
+
+        let desktopArguments = launcher.desktopOpenArguments(profile: profile)
+        try expect(desktopArguments.contains("CODEX_HOME=\(profile.codexHome.path)"), "desktop args should include CODEX_HOME")
+        try expect(
+            desktopArguments.contains("CODEX_ELECTRON_USER_DATA_PATH=\(profile.electronUserData.path)"),
+            "desktop args should include CODEX_ELECTRON_USER_DATA_PATH"
+        )
+        try expect(
+            desktopArguments.contains("--user-data-dir=\(profile.electronUserData.path)"),
+            "desktop args should include chromium user data dir"
+        )
+
+        let terminalScript = launcher.terminalScript(profile: profile)
+        try expect(terminalScript.contains("export CODEX_HOME="), "terminal script should export CODEX_HOME")
+        try expect(terminalScript.contains("export CODEX_ELECTRON_USER_DATA_PATH="), "terminal script should export electron user data")
+        try expect(terminalScript.hasSuffix("; codex"), "terminal script should run codex")
     }
 
     private static func expect(_ condition: @autoclosure () throws -> Bool, _ message: String) throws {
