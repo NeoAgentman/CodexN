@@ -5,6 +5,7 @@ import { spawnSync } from "node:child_process";
 import {
   defaultRoot,
   expandHome,
+  defaultElectronUserData,
   profileCodexHome,
   profileElectronUserData,
   profileLogDir,
@@ -65,6 +66,7 @@ export function createProfile({ id, name = id }, root = defaultRoot()) {
     },
     root,
   );
+  assertProfileRootAvailable(profile);
   materializeProfile(profile);
   store.profiles.push(profile);
   saveStore(store, root);
@@ -150,14 +152,52 @@ export function materializeProfile(profile) {
   fs.mkdirSync(profile.logDir, { recursive: true });
 }
 
+export function importDefaultProfile(
+  { id, name = id },
+  {
+    root = defaultRoot(),
+    defaultCodexHome = path.join(os.homedir(), ".codex"),
+    defaultElectronUserData: sourceElectronUserData = defaultElectronUserData(),
+  } = {},
+) {
+  const store = loadStore(root);
+  if (store.profiles.some((item) => item.id === id)) {
+    throw new Error(`Profile already exists: ${id}`);
+  }
+  if (!fs.existsSync(defaultCodexHome)) {
+    throw new Error(`Default Codex home does not exist: ${defaultCodexHome}`);
+  }
+  if (!fs.existsSync(sourceElectronUserData)) {
+    throw new Error(`Default Electron user data does not exist: ${sourceElectronUserData}`);
+  }
+  const profile = normalizeProfile(
+    {
+      id,
+      name,
+      codexHome: profileCodexHome(root, id),
+      electronUserData: profileElectronUserData(root, id),
+      logDir: profileLogDir(root, id),
+      appBundle: "/Applications/Codex.app",
+      defaultProvider: "openai",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+    root,
+  );
+  assertProfileRootAvailable(profile);
+  materializeProfile(profile);
+  copyDirectory(defaultCodexHome, profile.codexHome);
+  copyDirectory(sourceElectronUserData, profile.electronUserData);
+  store.profiles.push(profile);
+  saveStore(store, root);
+  return profile;
+}
+
 export function importCurrentCodex(profile) {
   const current = path.join(os.homedir(), ".codex");
   if (!fs.existsSync(current)) throw new Error("Current ~/.codex does not exist.");
   fs.mkdirSync(profile.codexHome, { recursive: true });
-  const result = spawnSync("ditto", [current, profile.codexHome], { encoding: "utf8" });
-  if (result.status !== 0) {
-    throw new Error(result.stderr?.trim() || `ditto exited with code ${result.status}`);
-  }
+  copyDirectory(current, profile.codexHome);
 }
 
 export function profileEnv(profile) {
@@ -212,4 +252,19 @@ export function doctorProfile(id, root = defaultRoot()) {
 
 function timestamp() {
   return new Date().toISOString().replace(/[-:]/g, "").replace(/\..+$/, "").replace("T", "-");
+}
+
+function assertProfileRootAvailable(profile) {
+  const profileRoot = path.dirname(profile.codexHome);
+  if (fs.existsSync(profileRoot) && fs.readdirSync(profileRoot).length > 0) {
+    throw new Error(`Profile directory is not empty: ${profileRoot}`);
+  }
+}
+
+function copyDirectory(source, target) {
+  fs.mkdirSync(target, { recursive: true });
+  const result = spawnSync("ditto", [source, target], { encoding: "utf8" });
+  if (result.status !== 0) {
+    throw new Error(result.stderr?.trim() || `ditto exited with code ${result.status}`);
+  }
 }

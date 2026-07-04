@@ -12,6 +12,10 @@ export function defaultRoot() {
   return expandHome(process.env.CODEXN_ROOT || "~/.codex-profiles");
 }
 
+export function defaultElectronUserData() {
+  return path.join(os.homedir(), "Library", "Application Support", "Codex");
+}
+
 export function profileCodexHome(root, id) {
   return path.join(root, id, "codex-home");
 }
