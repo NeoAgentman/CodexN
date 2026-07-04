@@ -7,7 +7,7 @@ It provides:
 - a Swift menu bar app for opening isolated Codex app profiles
 - isolated `CODEX_HOME` and Electron user-data directories per profile
 - a `Default Codex` entry for launching the normal system Codex environment
-- Settings for adding profiles and controlling app startup behavior
+- Settings for managing profiles, adding profiles, controlling app startup behavior, and viewing app version details
 
 This is useful when you want separate Codex accounts, providers, auth state, sessions, plugins, and Desktop user data on the same Mac.
 
@@ -54,15 +54,19 @@ ditto CodexNMenuBar/CodexN.app /Applications/CodexN.app
 
 The menu bar app supports:
 
-- opening the system default Codex via `Default Codex`
-- creating empty login profiles
-- importing the current default Codex profile
-- creating custom API-key profiles
-- launching the Codex app for each profile
-- removing profile registry entries
-- enabling or disabling launch at login from Settings
+- opening the system default Codex by clicking the first-level `Default Codex` menu item
+- opening a profile's Codex app by clicking that profile directly in the first-level menu
+- creating empty OAuth-login profiles from `Settings...` -> `Profiles`
+- importing the current default Codex profile from `Settings...` -> `Profiles`
+- creating custom API-key profiles from `Settings...` -> `Profiles`
+- removing profile registry entries from `Settings...` -> `Profiles`
+- opening the managed profiles folder from the menu
+- enabling or disabling launch at login from `Settings...` -> `General`
+- viewing version, build number, and build time from `About...` or `Settings...` -> `About`
 
 For the first local version, custom API keys are stored in `~/.codex-profiles/profiles.json`. The generated `config.toml` stores only a random `env_key`; CodexN injects the matching API key into the child process environment when launching that profile.
+
+`Remove Profile` only removes the profile from `profiles.json`. It does not delete that profile's `codex-home`, `electron-user-data`, or `logs` directories from disk.
 
 ## Development
 
