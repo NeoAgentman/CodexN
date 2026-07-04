@@ -9,6 +9,7 @@ struct TestRunner {
         try importsDefaultCodexHomeAndElectronData()
         try buildsLaunchCommandsWithProfileIsolation()
         try readsNodeGeneratedProfileRegistry()
+        try buildsDefaultLaunchCommandsWithoutProfileIsolation()
         print("CodexNCoreTestRunner: all tests passed")
     }
 
@@ -143,6 +144,18 @@ struct TestRunner {
         let profiles = try store.listProfiles()
 
         try expect(profiles.map(\.id) == ["zl"], "should decode Node-generated registry timestamps")
+    }
+
+    private static func buildsDefaultLaunchCommandsWithoutProfileIsolation() throws {
+        let launcher = Launcher()
+        let desktopArguments = launcher.defaultDesktopOpenArguments()
+
+        try expect(desktopArguments == ["-n", "/Applications/Codex.app"], "default desktop should not include profile env")
+        try expect(!desktopArguments.contains(where: { $0.contains("CODEX_HOME") }), "default desktop should not include CODEX_HOME")
+        try expect(!desktopArguments.contains(where: { $0.contains("user-data-dir") }), "default desktop should not include user-data-dir")
+
+        let terminalScript = launcher.defaultTerminalScript(cwd: URL(filePath: "/tmp"))
+        try expect(terminalScript == "cd '/tmp'; codex", "default CLI should run codex without profile env")
     }
 
     private static func expect(_ condition: @autoclosure () throws -> Bool, _ message: String) throws {

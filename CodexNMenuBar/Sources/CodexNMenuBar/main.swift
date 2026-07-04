@@ -27,8 +27,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         do {
             let profiles = try store.listProfiles()
+            let origin = NSMenuItem(title: "origin (system default)", action: nil, keyEquivalent: "")
+            origin.submenu = originMenu()
+            menu.addItem(origin)
+
             if profiles.isEmpty {
-                let empty = NSMenuItem(title: "No profiles", action: nil, keyEquivalent: "")
+                let empty = NSMenuItem(title: "No managed profiles", action: nil, keyEquivalent: "")
                 empty.isEnabled = false
                 menu.addItem(empty)
             } else {
@@ -57,6 +61,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(.separator())
         menu.addItem(profileAction("Backup", action: #selector(backupProfile(_:)), profile: profile))
         menu.addItem(profileAction("Remove...", action: #selector(removeProfile(_:)), profile: profile))
+        return menu
+    }
+
+    private func originMenu() -> NSMenu {
+        let menu = NSMenu()
+        menu.addItem(menuItem("Open Desktop", action: #selector(openOriginDesktop)))
+        menu.addItem(menuItem("Open CLI", action: #selector(openOriginCLI)))
         return menu
     }
 
@@ -91,6 +102,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         do {
             _ = try store.createProfile(id: input.id, name: input.name)
             rebuildMenu()
+        } catch {
+            showError(error)
+        }
+    }
+
+    @objc private func openOriginDesktop() {
+        do {
+            try launcher.openDefaultDesktop()
+        } catch {
+            showError(error)
+        }
+    }
+
+    @objc private func openOriginCLI() {
+        do {
+            try launcher.openDefaultCLIInTerminal()
         } catch {
             showError(error)
         }

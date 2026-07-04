@@ -30,6 +30,14 @@ public struct Launcher {
         return arguments
     }
 
+    public func defaultDesktopOpenArguments(project: URL? = nil, app: URL = URL(filePath: "/Applications/Codex.app")) -> [String] {
+        var arguments = ["-n", app.path]
+        if let project {
+            arguments.append(contentsOf: ["--args", project.path])
+        }
+        return arguments
+    }
+
     public func terminalScript(profile: Profile, cwd: URL = FileManager.default.homeDirectoryForCurrentUser) -> String {
         [
             "cd \(shellQuote(cwd.path))",
@@ -39,12 +47,28 @@ public struct Launcher {
         ].joined(separator: "; ")
     }
 
+    public func defaultTerminalScript(cwd: URL = FileManager.default.homeDirectoryForCurrentUser) -> String {
+        [
+            "cd \(shellQuote(cwd.path))",
+            "codex"
+        ].joined(separator: "; ")
+    }
+
     public func openDesktop(profile: Profile) throws {
         try run("/usr/bin/open", arguments: desktopOpenArguments(profile: profile))
     }
 
+    public func openDefaultDesktop() throws {
+        try run("/usr/bin/open", arguments: defaultDesktopOpenArguments())
+    }
+
     public func openCLIInTerminal(profile: Profile) throws {
         let script = "tell application \"Terminal\" to do script \(terminalScript(profile: profile).jsonStringLiteral)"
+        try run("/usr/bin/osascript", arguments: ["-e", script])
+    }
+
+    public func openDefaultCLIInTerminal() throws {
+        let script = "tell application \"Terminal\" to do script \(defaultTerminalScript().jsonStringLiteral)"
         try run("/usr/bin/osascript", arguments: ["-e", script])
     }
 
