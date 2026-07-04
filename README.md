@@ -59,7 +59,7 @@ The menu bar app supports:
 - importing the current default Codex profile
 - creating custom API-key profiles
 - launching the Codex app for each profile
-- backing up or removing profile registry entries
+- removing profile registry entries
 - enabling or disabling launch at login from Settings
 
 For the first local version, custom API keys are stored in `~/.codex-profiles/profiles.json`. The generated `config.toml` stores only a random `env_key`; CodexN injects the matching API key into the child process environment when launching that profile.

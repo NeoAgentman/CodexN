@@ -184,20 +184,6 @@ public final class ProfileStore {
         return profile
     }
 
-    public func backupProfile(id: String) throws -> URL {
-        let profile = try getProfile(id: id)
-        let profileRoot = profile.codexHome.deletingLastPathComponent()
-        let backupRoot = root.appending(path: "backups")
-        try fileManager.createDirectory(at: backupRoot, withIntermediateDirectories: true)
-        let target = backupRoot.appending(path: "\(id)-\(timestamp()).zip")
-        try runDitto(arguments: [
-            "-c", "-k", "--sequesterRsrc", "--keepParent",
-            profileRoot.path,
-            target.path
-        ])
-        return target
-    }
-
     private func load() throws -> Store {
         try ensureStore()
         let data = try Data(contentsOf: storeURL)
@@ -322,14 +308,6 @@ private func tomlString(_ value: String) -> String {
     value
         .replacingOccurrences(of: "\\", with: "\\\\")
         .replacingOccurrences(of: "\"", with: "\\\"")
-}
-
-private func timestamp() -> String {
-    let formatter = DateFormatter()
-    formatter.locale = Locale(identifier: "en_US_POSIX")
-    formatter.timeZone = TimeZone(secondsFromGMT: 0)
-    formatter.dateFormat = "yyyyMMdd-HHmmss"
-    return formatter.string(from: Date())
 }
 
 private func parseCodexNDate(_ value: String) -> Date? {

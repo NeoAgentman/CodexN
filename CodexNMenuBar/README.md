@@ -32,6 +32,6 @@ Use `Settings...` from the menu bar app to create profiles:
 - `New profile` + `OAuth login` creates isolated empty Codex home and Electron user data directories. Codex initializes them when you first open that profile.
 - `New profile` + `Custom API key` writes a minimal `codex-home/config.toml` with a generated `env_key`. The API key itself is stored in `profiles.json` for this first local version and is injected only when launching that profile.
 
-`Remove` only removes a profile from the registry. It does not create a backup and does not delete profile files from disk. Use `Backup` explicitly when you want an archive.
+`Remove` only removes a profile from the registry. It does not delete profile files from disk.
 
 The profile list also includes `Default Codex`. It opens the default Codex app without inheriting CodexN profile environment variables or setting a Chromium `--user-data-dir`.

@@ -95,7 +95,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let menu = NSMenu()
         menu.addItem(profileMenuItem("Open Codex App", symbol: "macwindow", action: #selector(openDesktop(_:)), profileID: profile.id))
         menu.addItem(.separator())
-        menu.addItem(profileMenuItem("Backup", symbol: "archivebox", action: #selector(backupProfile(_:)), profileID: profile.id))
         menu.addItem(profileMenuItem("Remove...", symbol: "minus.circle", action: #selector(removeProfile(_:)), profileID: profile.id))
         return menu
     }
@@ -181,19 +180,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
     }
 
-    @objc private func backupProfile(_ sender: NSMenuItem) {
-        withProfile(sender) { profile in
-            let backup = try store.backupProfile(id: profile.id)
-            showMessage(title: "Backup Created", message: backup.path)
-        }
-    }
-
     @objc private func removeProfile(_ sender: NSMenuItem) {
         guard let id = sender.representedObject as? String else { return }
         runMenuAction {
             guard confirm(
                 title: "Remove Profile",
-                message: "Remove \(id) from CodexN? Files remain on disk. No backup is created automatically."
+                message: "Remove \(id) from CodexN? Files remain on disk."
             ) else {
                 return
             }
