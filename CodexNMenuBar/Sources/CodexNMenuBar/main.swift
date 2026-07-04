@@ -203,7 +203,8 @@ final class AddProfileWindowController: NSWindowController, NSWindowDelegate {
 
     private let store: ProfileStore
     private let onComplete: () -> Void
-    private let labelWidth: CGFloat = 132
+    private let formWidth: CGFloat = 420
+    private let labelWidth: CGFloat = 108
     private let controlWidth: CGFloat = 300
     private let idField = NSTextField(string: "")
     private let nameField = NSTextField(string: "")
@@ -302,8 +303,8 @@ final class AddProfileWindowController: NSWindowController, NSWindowDelegate {
         window.contentView = content
 
         NSLayoutConstraint.activate([
-            root.leadingAnchor.constraint(equalTo: content.leadingAnchor, constant: 20),
-            root.trailingAnchor.constraint(equalTo: content.trailingAnchor, constant: -20),
+            root.centerXAnchor.constraint(equalTo: content.centerXAnchor),
+            root.widthAnchor.constraint(equalToConstant: formWidth),
             root.topAnchor.constraint(equalTo: content.topAnchor, constant: 20),
             root.bottomAnchor.constraint(lessThanOrEqualTo: content.bottomAnchor, constant: -20),
             spacer.widthAnchor.constraint(greaterThanOrEqualToConstant: 1)
