@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { spawnSync } from "node:child_process";
 import {
   defaultRoot,
   expandHome,
@@ -100,6 +101,32 @@ export function deleteProfile(id, root = defaultRoot()) {
   return normalizeProfile(profile, root);
 }
 
+export function backupProfile(id, root = defaultRoot()) {
+  const profile = getProfile(id, root);
+  const profileRoot = path.dirname(profile.codexHome);
+  const backupRoot = path.join(root, "backups");
+  fs.mkdirSync(backupRoot, { recursive: true });
+  const target = path.join(backupRoot, `${id}-${timestamp()}.zip`);
+  const result = spawnSync(
+    "ditto",
+    ["-c", "-k", "--sequesterRsrc", "--keepParent", profileRoot, target],
+    { encoding: "utf8" },
+  );
+  if (result.status !== 0) {
+    throw new Error(result.stderr?.trim() || `ditto exited with code ${result.status}`);
+  }
+  return target;
+}
+
+export function revealProfile(id, root = defaultRoot()) {
+  const profile = getProfile(id, root);
+  const result = spawnSync("open", [path.dirname(profile.codexHome)], { encoding: "utf8" });
+  if (result.status !== 0) {
+    throw new Error(result.stderr?.trim() || `open exited with code ${result.status}`);
+  }
+  return path.dirname(profile.codexHome);
+}
+
 export function normalizeProfile(profile, root = defaultRoot()) {
   return {
     id: profile.id,
@@ -130,6 +157,16 @@ export function materializeProfile(profile, { fromCurrent = false } = {}) {
       configPath,
       `model_provider = "${profile.defaultProvider}"\n\n[model_providers.${profile.defaultProvider}]\nname = "${profile.defaultProvider}"\nwire_api = "responses"\n`,
     );
+  }
+}
+
+export function importCurrentCodex(profile) {
+  const current = path.join(os.homedir(), ".codex");
+  if (!fs.existsSync(current)) throw new Error("Current ~/.codex does not exist.");
+  fs.mkdirSync(profile.codexHome, { recursive: true });
+  const result = spawnSync("ditto", [current, profile.codexHome], { encoding: "utf8" });
+  if (result.status !== 0) {
+    throw new Error(result.stderr?.trim() || `ditto exited with code ${result.status}`);
   }
 }
 
@@ -171,4 +208,8 @@ export function doctorProfile(id, root = defaultRoot()) {
     },
   ];
   return { profile, checks, ok: checks.every((check) => check.ok || check.label === "auth.json") };
+}
+
+function timestamp() {
+  return new Date().toISOString().replace(/[-:]/g, "").replace(/\..+$/, "").replace("T", "-");
 }

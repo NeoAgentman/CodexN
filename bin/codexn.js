@@ -4,12 +4,15 @@ import path from "node:path";
 import process from "node:process";
 import {
   createProfile,
+  backupProfile,
   deleteProfile,
   doctorProfile,
   ensureStore,
   getProfile,
+  importCurrentCodex,
   listProfiles,
   renameProfile,
+  revealProfile,
   updateProfile,
 } from "../src/profile-store.js";
 import {
@@ -39,6 +42,9 @@ Usage:
   codexn cli <id> [-- <codex args...>]
   codexn terminal <id> [--project <path>] [-- <codex args...>]
   codexn login <id>
+  codexn backup <id>
+  codexn import-current <id>
+  codexn reveal <id>
   codexn config <id> get
   codexn config <id> set <key> <value>
   codexn provider <id> set --id <provider> [--name <name>] [--base-url <url>] [--api-key <key>] [--model <model>] [--wire-api <responses|chat>]
@@ -164,6 +170,23 @@ async function main() {
       process.stdout.write(`Opened login Terminal for ${profile.id}.\n`);
       return;
     }
+    case "backup": {
+      const id = requireId(args.shift());
+      printJson({ backupPath: backupProfile(id) });
+      return;
+    }
+    case "import-current": {
+      const id = requireId(args.shift());
+      const profile = getProfile(id);
+      importCurrentCodex(profile);
+      printJson({ status: "imported", profile: getProfile(id) });
+      return;
+    }
+    case "reveal": {
+      const id = requireId(args.shift());
+      printJson({ path: revealProfile(id) });
+      return;
+    }
     case "config": {
       const id = requireId(args.shift());
       const sub = args.shift();
@@ -212,7 +235,8 @@ async function main() {
     case "remove": {
       const id = requireId(args.shift());
       if (!hasFlag("--yes")) throw new Error("Refusing to remove without --yes.");
-      printJson({ removed: deleteProfile(id) });
+      const backupPath = backupProfile(id);
+      printJson({ backupPath, removed: deleteProfile(id) });
       return;
     }
     case "gui": {

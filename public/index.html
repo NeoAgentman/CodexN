@@ -56,11 +56,19 @@
           <article class="panel span2">
             <div class="panel-head">
               <h3>Paths</h3>
-              <button id="saveNameButton" type="button">Save name</button>
+              <div class="mini-actions">
+                <button id="saveNameButton" type="button">Save name</button>
+                <button id="revealButton" type="button">Reveal</button>
+                <button id="backupButton" type="button">Backup</button>
+              </div>
             </div>
             <label>
               Display name
               <input id="nameInput" />
+            </label>
+            <label>
+              Project path for launches
+              <input id="projectInput" placeholder="/Users/you/project" />
             </label>
             <div class="path-list">
               <div><span>CODEX_HOME</span><code id="codexHome"></code></div>
@@ -84,6 +92,7 @@
               <dt>Providers</dt>
               <dd id="providerList"></dd>
             </dl>
+            <button id="importCurrentButton" type="button">Import current ~/.codex</button>
           </article>
 
           <article class="panel span2">

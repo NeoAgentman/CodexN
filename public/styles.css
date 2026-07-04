@@ -82,7 +82,8 @@ h1 { font-size: 20px; }
   justify-content: space-between;
   gap: 16px;
 }
-.actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: end; }
+.actions, .mini-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: end; }
+.mini-actions button { min-height: 32px; padding: 0 10px; }
 .empty {
   border: 1px dashed #3b4245;
   color: var(--muted);

@@ -4,10 +4,13 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   createProfile,
+  backupProfile,
   doctorProfile,
   getProfile,
+  importCurrentCodex,
   listProfiles,
   renameProfile,
+  revealProfile,
   updateProfile,
 } from "./profile-store.js";
 import { readConfigSummary, setModelProvider, upsertProvider } from "./config-toml.js";
@@ -69,6 +72,19 @@ async function handleApi(request, response, url) {
   }
   if (method === "GET" && action === "config") {
     sendJson(response, 200, { config: readConfigSummary(getProfile(id)) });
+    return;
+  }
+  if (method === "POST" && action === "backup") {
+    sendJson(response, 200, { status: "ok", backupPath: backupProfile(id) });
+    return;
+  }
+  if (method === "POST" && action === "import-current") {
+    importCurrentCodex(getProfile(id));
+    sendJson(response, 200, { status: "ok", profile: profileView(getProfile(id)) });
+    return;
+  }
+  if (method === "POST" && action === "reveal") {
+    sendJson(response, 200, { status: "ok", path: revealProfile(id) });
     return;
   }
   if (method === "PATCH" && !action) {
