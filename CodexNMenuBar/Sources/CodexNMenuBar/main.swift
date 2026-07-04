@@ -43,7 +43,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             loadError = String(describing: error)
         }
 
-        let header = ProfileMenuHeader(profileCount: profiles.count)
+        let header = ProfileMenuHeader()
         let hosting = MenuHostingView(rootView: header)
         let width: CGFloat = 280
         hosting.frame = NSRect(x: 0, y: 0, width: width, height: 1)
@@ -54,10 +54,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         headerItem.view = hosting
         headerItem.isEnabled = false
         menu.addItem(headerItem)
-        menu.addItem(.separator())
-
-        menu.addItem(menuItem("Refresh", symbol: "arrow.clockwise", action: #selector(refreshProfiles)))
-        menu.addItem(menuItem("Settings...", symbol: "gearshape", action: #selector(settingsFromMenu)))
         menu.addItem(.separator())
 
         let origin = NSMenuItem(title: "origin", action: nil, keyEquivalent: "")
@@ -86,6 +82,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             }
         }
 
+        menu.addItem(.separator())
+        menu.addItem(menuItem("Settings...", symbol: "gearshape", action: #selector(settingsFromMenu)))
         menu.addItem(.separator())
         menu.addItem(menuItem("Open Profiles Folder", symbol: "folder", action: #selector(openProfilesFolderFromMenu)))
         menu.addItem(menuItem("Quit", symbol: "xmark.rectangle", action: #selector(quitFromMenu)))
@@ -156,10 +154,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     private func quit() {
         NSApp.terminate(nil)
-    }
-
-    @objc private func refreshProfiles() {
-        rebuildMenu()
     }
 
     @objc private func settingsFromMenu() {
@@ -269,13 +263,11 @@ private final class MenuHostingView<Content: View>: NSHostingView<Content> {
 }
 
 private struct ProfileMenuHeader: View {
-    let profileCount: Int
-
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             Text("CodexN")
                 .font(.headline)
-            Text("\(profileCount) managed profile\(profileCount == 1 ? "" : "s")")
+            Text("Switch Codex profiles and providers.")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
         }
