@@ -3,13 +3,6 @@
 # Local scratch files
 bootstrap.js
 
-# Node
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-
 # Swift Package Manager
 .build/
 DerivedData/

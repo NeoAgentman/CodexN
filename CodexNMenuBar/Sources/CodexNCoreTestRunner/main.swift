@@ -11,7 +11,7 @@ struct TestRunner {
         try rejectsInvalidAPIKeyProviderID()
         try buildsLaunchCommandsWithProfileIsolation()
         try injectsAPIKeyEnvironmentIntoLaunchCommands()
-        try readsNodeGeneratedProfileRegistry()
+        try readsLegacyProfileRegistry()
         try buildsDefaultLaunchCommandsWithoutProfileIsolation()
         print("CodexNCoreTestRunner: all tests passed")
     }
@@ -195,7 +195,7 @@ struct TestRunner {
         )
     }
 
-    private static func readsNodeGeneratedProfileRegistry() throws {
+    private static func readsLegacyProfileRegistry() throws {
         let root = try temporaryDirectory()
         let json = """
         {
@@ -220,7 +220,7 @@ struct TestRunner {
         let store = ProfileStore(root: root)
         let profiles = try store.listProfiles()
 
-        try expect(profiles.map(\.id) == ["zl"], "should decode Node-generated registry timestamps")
+        try expect(profiles.map(\.id) == ["zl"], "should decode legacy registry timestamps")
     }
 
     private static func buildsDefaultLaunchCommandsWithoutProfileIsolation() throws {
