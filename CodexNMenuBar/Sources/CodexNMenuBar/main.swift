@@ -203,12 +203,14 @@ final class AddProfileWindowController: NSWindowController, NSWindowDelegate {
 
     private let store: ProfileStore
     private let onComplete: () -> Void
-    private let idField = NSTextField(string: "work")
-    private let nameField = NSTextField(string: "Work")
+    private let labelWidth: CGFloat = 132
+    private let controlWidth: CGFloat = 300
+    private let idField = NSTextField(string: "")
+    private let nameField = NSTextField(string: "")
     private let modePopup = NSPopUpButton()
     private let authMode = NSSegmentedControl(labels: ["OAuth login", "Custom API key"], trackingMode: .selectOne, target: nil, action: nil)
-    private let authModeStack = NSStackView()
-    private let apiFieldsStack = NSStackView()
+    private var authModeRow: NSView?
+    private var apiFieldRows: [NSView] = []
     private let providerField = NSTextField(string: "")
     private let modelField = NSTextField(string: "")
     private let baseURLField = NSTextField(string: "")
@@ -219,7 +221,7 @@ final class AddProfileWindowController: NSWindowController, NSWindowDelegate {
         self.onComplete = onComplete
 
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 460, height: 430),
+            contentRect: NSRect(x: 0, y: 0, width: 500, height: 380),
             styleMask: [.titled, .closable],
             backing: .buffered,
             defer: false
@@ -243,31 +245,16 @@ final class AddProfileWindowController: NSWindowController, NSWindowDelegate {
         modePopup.addItems(withTitles: ["Import from default", "New profile"])
         modePopup.target = self
         modePopup.action = #selector(modeChanged)
+        modePopup.selectItem(withTitle: "New profile")
 
         authMode.selectedSegment = 0
         authMode.target = self
         authMode.action = #selector(authModeChanged)
 
-        providerField.placeholderString = "zl"
-        modelField.placeholderString = "gpt-5.5"
-        baseURLField.placeholderString = "https://api.example.com/v1"
-        apiKeyField.placeholderString = "API key"
-
-        authModeStack.orientation = .vertical
-        authModeStack.spacing = 6
-        authModeStack.addArrangedSubview(fieldLabel("New profile auth"))
-        authModeStack.addArrangedSubview(authMode)
-
-        apiFieldsStack.orientation = .vertical
-        apiFieldsStack.spacing = 8
-        apiFieldsStack.addArrangedSubview(fieldLabel("Model Provider"))
-        apiFieldsStack.addArrangedSubview(providerField)
-        apiFieldsStack.addArrangedSubview(fieldLabel("Model Name"))
-        apiFieldsStack.addArrangedSubview(modelField)
-        apiFieldsStack.addArrangedSubview(fieldLabel("Base URL"))
-        apiFieldsStack.addArrangedSubview(baseURLField)
-        apiFieldsStack.addArrangedSubview(fieldLabel("API Key"))
-        apiFieldsStack.addArrangedSubview(apiKeyField)
+        [idField, nameField, providerField, modelField, baseURLField, apiKeyField].forEach { field in
+            field.lineBreakMode = .byTruncatingTail
+            field.controlSize = .regular
+        }
 
         let createButton = NSButton(title: "Create", target: self, action: #selector(createProfile))
         createButton.bezelStyle = .rounded
@@ -287,19 +274,27 @@ final class AddProfileWindowController: NSWindowController, NSWindowDelegate {
         buttonRow.orientation = .horizontal
         buttonRow.alignment = .centerY
 
+        let authModeRow = formRow(label: "New profile auth", control: authMode)
+        let providerRow = formRow(label: "Model Provider", control: providerField)
+        let modelRow = formRow(label: "Model Name", control: modelField)
+        let baseURLRow = formRow(label: "Base URL", control: baseURLField)
+        let apiKeyRow = formRow(label: "API Key", control: apiKeyField)
+        self.authModeRow = authModeRow
+        apiFieldRows = [providerRow, modelRow, baseURLRow, apiKeyRow]
+
         let root = NSStackView(views: [
-            fieldLabel("Profile ID"),
-            idField,
-            fieldLabel("Display Name"),
-            nameField,
-            fieldLabel("Mode"),
-            modePopup,
-            authModeStack,
-            apiFieldsStack,
+            formRow(label: "Profile ID", control: idField),
+            formRow(label: "Display Name", control: nameField),
+            formRow(label: "Mode", control: modePopup),
+            authModeRow,
+            providerRow,
+            modelRow,
+            baseURLRow,
+            apiKeyRow,
             buttonRow
         ])
         root.orientation = .vertical
-        root.spacing = 8
+        root.spacing = 12
         root.translatesAutoresizingMaskIntoConstraints = false
 
         let content = NSView()
@@ -311,25 +306,11 @@ final class AddProfileWindowController: NSWindowController, NSWindowDelegate {
             root.trailingAnchor.constraint(equalTo: content.trailingAnchor, constant: -20),
             root.topAnchor.constraint(equalTo: content.topAnchor, constant: 20),
             root.bottomAnchor.constraint(lessThanOrEqualTo: content.bottomAnchor, constant: -20),
-            idField.heightAnchor.constraint(equalToConstant: 24),
-            nameField.heightAnchor.constraint(equalToConstant: 24),
-            providerField.heightAnchor.constraint(equalToConstant: 24),
-            modelField.heightAnchor.constraint(equalToConstant: 24),
-            baseURLField.heightAnchor.constraint(equalToConstant: 24),
-            apiKeyField.heightAnchor.constraint(equalToConstant: 24),
             spacer.widthAnchor.constraint(greaterThanOrEqualToConstant: 1)
         ])
     }
 
     @objc private func modeChanged() {
-        let importMode = modePopup.indexOfSelectedItem == 0
-        if importMode && (idField.stringValue.isEmpty || idField.stringValue == "work") {
-            idField.stringValue = "default"
-            nameField.stringValue = "Default"
-        } else if !importMode && (idField.stringValue.isEmpty || idField.stringValue == "default") {
-            idField.stringValue = "work"
-            nameField.stringValue = "Work"
-        }
         updateVisibility()
     }
 
@@ -372,13 +353,29 @@ final class AddProfileWindowController: NSWindowController, NSWindowDelegate {
     private func updateVisibility() {
         let isNewProfile = modePopup.indexOfSelectedItem == 1
         let isAPIKey = isNewProfile && authMode.selectedSegment == 1
-        authModeStack.isHidden = !isNewProfile
-        apiFieldsStack.isHidden = !isAPIKey
+        authModeRow?.isHidden = !isNewProfile
+        apiFieldRows.forEach { $0.isHidden = !isAPIKey }
+    }
+
+    private func formRow(label text: String, control: NSView) -> NSStackView {
+        let label = fieldLabel(text)
+        control.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            label.widthAnchor.constraint(equalToConstant: labelWidth),
+            control.widthAnchor.constraint(equalToConstant: controlWidth)
+        ])
+
+        let row = NSStackView(views: [label, control])
+        row.orientation = .horizontal
+        row.alignment = .centerY
+        row.spacing = 12
+        return row
     }
 
     private func fieldLabel(_ text: String) -> NSTextField {
         let label = NSTextField(labelWithString: text)
         label.font = .systemFont(ofSize: NSFont.smallSystemFontSize)
+        label.alignment = .right
         return label
     }
 
