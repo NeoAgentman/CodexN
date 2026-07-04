@@ -63,6 +63,14 @@ public struct Launcher {
         ].joined(separator: "; ")
     }
 
+    public func terminalAppleScript(profile: Profile) -> String {
+        "tell application \"Terminal\" to do script \(appleScriptStringLiteral(terminalScript(profile: profile)))"
+    }
+
+    public func defaultTerminalAppleScript() -> String {
+        "tell application \"Terminal\" to do script \(appleScriptStringLiteral(defaultTerminalScript()))"
+    }
+
     public func openDesktop(profile: Profile) throws {
         try run("/usr/bin/open", arguments: desktopOpenArguments(profile: profile))
     }
@@ -72,13 +80,11 @@ public struct Launcher {
     }
 
     public func openCLIInTerminal(profile: Profile) throws {
-        let script = "tell application \"Terminal\" to do script \(terminalScript(profile: profile).jsonStringLiteral)"
-        try run("/usr/bin/osascript", arguments: ["-e", script])
+        try run("/usr/bin/osascript", arguments: ["-e", terminalAppleScript(profile: profile)])
     }
 
     public func openDefaultCLIInTerminal() throws {
-        let script = "tell application \"Terminal\" to do script \(defaultTerminalScript().jsonStringLiteral)"
-        try run("/usr/bin/osascript", arguments: ["-e", script])
+        try run("/usr/bin/osascript", arguments: ["-e", defaultTerminalAppleScript()])
     }
 
     private func run(_ executable: String, arguments: [String]) throws {
@@ -103,9 +109,9 @@ private func shellQuote(_ value: String) -> String {
     "'\(value.replacingOccurrences(of: "'", with: "'\\''"))'"
 }
 
-private extension String {
-    var jsonStringLiteral: String {
-        let data = try! JSONEncoder().encode(self)
-        return String(data: data, encoding: .utf8)!
-    }
+private func appleScriptStringLiteral(_ value: String) -> String {
+    let escaped = value
+        .replacingOccurrences(of: "\\", with: "\\\\")
+        .replacingOccurrences(of: "\"", with: "\\\"")
+    return "\"\(escaped)\""
 }

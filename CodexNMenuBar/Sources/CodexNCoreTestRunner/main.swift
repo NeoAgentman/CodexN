@@ -11,6 +11,7 @@ struct TestRunner {
         try rejectsInvalidAPIKeyProviderID()
         try buildsLaunchCommandsWithProfileIsolation()
         try injectsAPIKeyEnvironmentIntoLaunchCommands()
+        try buildsTerminalAppleScriptWithoutInvalidSlashEscapes()
         try readsLegacyProfileRegistry()
         try buildsDefaultLaunchCommandsWithoutProfileIsolation()
         print("CodexNCoreTestRunner: all tests passed")
@@ -193,6 +194,19 @@ struct TestRunner {
             terminalScript.contains("export \(envName)='sk-test secret'"),
             "terminal script should export API key env"
         )
+    }
+
+    private static func buildsTerminalAppleScriptWithoutInvalidSlashEscapes() throws {
+        let root = try temporaryDirectory()
+        let store = ProfileStore(root: root)
+        let profile = try store.createProfile(id: "work", name: "Work")
+        let launcher = Launcher()
+
+        let appleScript = launcher.terminalAppleScript(profile: profile)
+
+        try expect(appleScript.contains("tell application \"Terminal\" to do script"), "should target Terminal")
+        try expect(!appleScript.contains("\\/"), "AppleScript should not use JSON-style slash escapes")
+        try expect(appleScript.contains("/codex-home"), "AppleScript should include the profile codex home path")
     }
 
     private static func readsLegacyProfileRegistry() throws {
