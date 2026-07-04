@@ -1,0 +1,22 @@
+.DS_Store
+
+# Local scratch files
+bootstrap.js
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Swift Package Manager
+.build/
+DerivedData/
+
+# Packaged app bundles
+*.app/
+
+# Local profile data and backups
+.codex-profiles/
+backups/

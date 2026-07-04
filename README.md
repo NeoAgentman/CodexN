@@ -1,65 +1,113 @@
 # CodexN
 
-CodexN is a macOS-only launcher for running multiple isolated Codex environments on one machine.
+CodexN is a macOS launcher for running multiple isolated Codex environments on one machine.
 
-Each profile owns isolated paths for:
+It provides:
 
-- `CODEX_HOME`
-- `CODEX_ELECTRON_USER_DATA_PATH`
-- Codex `config.toml` and `auth.json` after Codex creates them
-- local sessions, sqlite state, logs, and plugins under that home
+- a small `codexn` CLI for profile management
+- a native Swift menu bar app for opening Codex Desktop or CLI profiles
+- isolated `CODEX_HOME` and Electron user-data directories per profile
+- an `origin (system default)` entry for launching your normal system Codex
 
-This lets `personal`, `work`, or other profiles use different Codex accounts and providers without sharing the default `~/.codex` or Desktop user data state.
+This is useful when you want separate Codex accounts, providers, auth state, sessions, plugins, and Desktop user data on the same Mac.
 
-## Quick Start
+## How It Works
 
-```bash
-npm link
-codexn import-default default
-codexn init personal --name Personal
-codexn init work --name Work
-codexn desktop work
-codexn cli work -- --help
+Each managed profile gets its own directory under `~/.codex-profiles` by default:
+
+```text
+~/.codex-profiles/<profile-id>/
+  codex-home/
+  electron-user-data/
+  logs/
 ```
 
-Profile data is stored in `~/.codex-profiles` by default. Override it with `CODEXN_ROOT`.
+When launching a managed profile, CodexN sets:
 
-## Commands
-
-```bash
-codexn init <id> [--name <name>]
-codexn import-default <id> [--name <name>]
-codexn list [--json]
-codexn desktop <id> [--project <path>] [--app <Codex|/path/Codex.app>]
-codexn cli <id> -- <codex args...>
-codexn backup <id>
-codexn remove <id> [--yes]
-```
-
-## Desktop Isolation
-
-Desktop launch uses macOS `open -n` with both isolation knobs:
-
-```bash
+```text
 CODEX_HOME=<profile>/codex-home
 CODEX_ELECTRON_USER_DATA_PATH=<profile>/electron-user-data
 --user-data-dir=<profile>/electron-user-data
 ```
 
-Codex Desktop itself handles multi-window startup. CodexN does not clone or patch the app bundle.
+Codex itself initializes `config.toml`, auth files, sessions, plugins, and other Codex-owned data when you first open that profile.
 
-`init` only creates the profile registry entry and empty isolated directories. It does not create `config.toml`, `auth.json`, sessions, or any other Codex-owned configuration. The first `codexn cli` or `codexn desktop` run lets Codex initialize that profile's `CODEX_HOME` itself.
+## CLI
 
-`import-default` creates a new profile and copies both default locations into it:
+```bash
+npm install
+node ./bin/codexn.js init work --name Work
+node ./bin/codexn.js import-default default --name Default
+node ./bin/codexn.js list
+node ./bin/codexn.js desktop work
+node ./bin/codexn.js cli work -- --help
+```
+
+Supported commands:
 
 ```text
-~/.codex -> <profile>/codex-home
-~/Library/Application Support/Codex -> <profile>/electron-user-data
+init <id> [--name <name>]
+import-default <id> [--name <name>]
+list [--json]
+desktop <id> [--project <path>] [--app <Codex|/path/Codex.app>]
+cli <id> -- <codex args...>
+backup <id>
+remove <id> [--yes]
+```
+
+`remove` only removes the profile from the registry. It does not delete profile files and does not create a backup automatically.
+
+## Menu Bar App
+
+The native app lives in `CodexNMenuBar`.
+
+Build and package:
+
+```bash
+cd CodexNMenuBar
+swift run CodexNCoreTestRunner
+swift build --product CodexNMenuBar
+scripts/package-app.sh
+open CodexN.app
+```
+
+Install locally:
+
+```bash
+ditto CodexNMenuBar/CodexN.app /Applications/CodexN.app
+```
+
+The menu bar app supports:
+
+- opening the system default Codex via `origin (system default)`
+- creating empty OAuth-login profiles
+- importing the current default Codex profile
+- creating custom API-key profiles
+- launching Codex Desktop and CLI for each managed profile
+- backing up or removing profile registry entries
+
+For the first local version, custom API keys are stored in `~/.codex-profiles/profiles.json`. The generated `config.toml` stores only a random `env_key`; CodexN injects the matching API key into the child process environment when launching that profile.
+
+## Development
+
+Run Node checks and tests:
+
+```bash
+npm run check
+npm test
+```
+
+Run Swift checks:
+
+```bash
+cd CodexNMenuBar
+swift run CodexNCoreTestRunner
+swift build --product CodexNMenuBar
 ```
 
 ## Safety Notes
 
-- Do not run multiple Desktop windows against the same profile at the same time unless you are comfortable with shared SQLite/session writes.
-- `init` refuses to reuse a non-empty profile directory. Pick a new id or clean the old directory first.
-- `import-default` requires a new profile id and copies the current default Codex CLI and Desktop data into that profile.
-- `remove` only removes the profile from the registry. It does not create a backup and does not delete profile files from disk. Run `backup` explicitly when you want an archive.
+- Do not open multiple Codex Desktop windows against the same managed profile unless you are comfortable with shared local state writes.
+- `init` refuses to reuse a non-empty profile directory.
+- `import-default` copies both `~/.codex` and `~/Library/Application Support/Codex` into a new managed profile.
+- Profile data can become large because it contains sessions, plugins, caches, and Electron user data.
