@@ -5,6 +5,8 @@ function configPath(profile) {
   return path.join(profile.codexHome, "config.toml");
 }
 
+const BUILTIN_PROVIDERS = new Set(["openai", "chatgpt", "ollama", "lmstudio"]);
+
 function readConfig(profile) {
   const file = configPath(profile);
   return fs.existsSync(file) ? fs.readFileSync(file, "utf8") : "";
@@ -45,7 +47,20 @@ export function readConfigSummary(profile) {
     modelProvider: rootValue(text, "model_provider") || profile.defaultProvider || "openai",
     model: rootValue(text, "model"),
     providers,
+    builtInOverrides: providers.filter((provider) => BUILTIN_PROVIDERS.has(provider)),
   };
+}
+
+export function repairConfig(profile) {
+  let text = readConfig(profile);
+  for (const provider of BUILTIN_PROVIDERS) {
+    text = removeProviderSection(text, provider);
+  }
+  if (!rootValue(text, "model_provider")) {
+    text = `model_provider = "openai"\n${text.trimStart()}`;
+  }
+  writeConfig(profile, text.replace(/\n{3,}/g, "\n\n"));
+  return readConfigSummary(profile);
 }
 
 export function writeRootConfigValue(profile, key, value) {
@@ -79,6 +94,9 @@ export function upsertProvider(profile, provider) {
   if (!id || !/^[A-Za-z0-9._-]+$/.test(id)) {
     throw new Error("Provider id must use letters, numbers, dot, underscore, or dash.");
   }
+  if (BUILTIN_PROVIDERS.has(id)) {
+    throw new Error(`Refusing to override built-in provider: ${id}. Use a custom id like ${id}-custom.`);
+  }
   const text = readConfig(profile);
   const lines = text.split(/\r?\n/);
   const header = `[model_providers.${id}]`;
@@ -107,4 +125,19 @@ export function upsertProvider(profile, provider) {
     ? `${text.trimEnd()}\n\n${block.join("\n")}\n`
     : [...lines.slice(0, start), ...block, ...lines.slice(end)].join("\n");
   writeConfig(profile, next.replace(/\n{3,}/g, "\n\n"));
+}
+
+function removeProviderSection(text, providerId) {
+  const lines = text.split(/\r?\n/);
+  const header = `[model_providers.${providerId}]`;
+  const start = lines.findIndex((line) => line.trim() === header);
+  if (start === -1) return text;
+  let end = lines.length;
+  for (let index = start + 1; index < lines.length; index += 1) {
+    if (lines[index].trim().startsWith("[")) {
+      end = index;
+      break;
+    }
+  }
+  return [...lines.slice(0, start), ...lines.slice(end)].join("\n");
 }

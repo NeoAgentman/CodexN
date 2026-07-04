@@ -62,7 +62,7 @@ function renderProfile() {
   const hasProfile = Boolean(profile);
   $("emptyState").classList.toggle("hidden", hasProfile);
   $("profilePanel").classList.toggle("hidden", !hasProfile);
-  for (const id of ["desktopButton", "terminalButton", "loginButton", "backupButton", "revealButton", "importCurrentButton"]) $(id).disabled = !hasProfile;
+  for (const id of ["desktopButton", "terminalButton", "loginButton", "backupButton", "revealButton", "repairButton", "importCurrentButton"]) $(id).disabled = !hasProfile;
   if (!profile) {
     $("profileTitle").textContent = "选择或创建 profile";
     $("profileSubtitle").textContent = "每个 profile 拥有独立 CODEX_HOME 和 Electron userData。";
@@ -153,6 +153,7 @@ $("terminalButton").onclick = () => runAction("terminal");
 $("loginButton").onclick = () => runAction("login");
 $("backupButton").onclick = () => runAction("backup");
 $("revealButton").onclick = () => runAction("reveal");
+$("repairButton").onclick = () => runAction("repair", true);
 $("importCurrentButton").onclick = async () => {
   if (!window.confirm("Import current ~/.codex into this profile? Existing files may be overwritten.")) return;
   await runAction("import-current", true);

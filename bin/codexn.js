@@ -17,6 +17,7 @@ import {
 } from "../src/profile-store.js";
 import {
   readConfigSummary,
+  repairConfig,
   setModelProvider,
   upsertProvider,
   writeRootConfigValue,
@@ -46,6 +47,7 @@ Usage:
   codexn import-current <id>
   codexn reveal <id>
   codexn config <id> get
+  codexn repair <id>
   codexn config <id> set <key> <value>
   codexn provider <id> set --id <provider> [--name <name>] [--base-url <url>] [--api-key <key>] [--model <model>] [--wire-api <responses|chat>]
   codexn rename <id> <name>
@@ -204,6 +206,11 @@ async function main() {
         return;
       }
       throw new Error("Usage: codexn config <id> get|set");
+    }
+    case "repair": {
+      const id = requireId(args.shift());
+      printJson({ config: repairConfig(getProfile(id)) });
+      return;
     }
     case "provider": {
       const id = requireId(args.shift());

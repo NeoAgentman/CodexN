@@ -10,6 +10,7 @@ import {
   profileLogDir,
   storePath,
 } from "./paths.js";
+import { readConfigSummary } from "./config-toml.js";
 
 const STORE_VERSION = 1;
 
@@ -153,10 +154,7 @@ export function materializeProfile(profile, { fromCurrent = false } = {}) {
     if (fs.existsSync(current)) fs.copyFileSync(current, configPath);
   }
   if (!fs.existsSync(configPath)) {
-    fs.writeFileSync(
-      configPath,
-      `model_provider = "${profile.defaultProvider}"\n\n[model_providers.${profile.defaultProvider}]\nname = "${profile.defaultProvider}"\nwire_api = "responses"\n`,
-    );
+    fs.writeFileSync(configPath, `model_provider = "${profile.defaultProvider}"\n`);
   }
 }
 
@@ -180,6 +178,7 @@ export function profileEnv(profile) {
 
 export function doctorProfile(id, root = defaultRoot()) {
   const profile = getProfile(id, root);
+  const config = readConfigSummary(profile);
   const checks = [
     {
       label: "Codex home",
@@ -205,6 +204,13 @@ export function doctorProfile(id, root = defaultRoot()) {
       label: "Codex.app",
       ok: fs.existsSync(profile.appBundle),
       detail: profile.appBundle,
+    },
+    {
+      label: "Built-in provider overrides",
+      ok: config.builtInOverrides.length === 0,
+      detail: config.builtInOverrides.length
+        ? `Remove sections: ${config.builtInOverrides.join(", ")}`
+        : "none",
     },
   ];
   return { profile, checks, ok: checks.every((check) => check.ok || check.label === "auth.json") };

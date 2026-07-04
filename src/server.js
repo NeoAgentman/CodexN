@@ -13,7 +13,7 @@ import {
   revealProfile,
   updateProfile,
 } from "./profile-store.js";
-import { readConfigSummary, setModelProvider, upsertProvider } from "./config-toml.js";
+import { readConfigSummary, repairConfig, setModelProvider, upsertProvider } from "./config-toml.js";
 import { openCliInTerminal, openCodexDesktop, openLoginInTerminal, openUrl } from "./macos-launch.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -120,6 +120,10 @@ async function handleApi(request, response, url) {
     setModelProvider(profile, body.providerId);
     updateProfile(id, { defaultProvider: body.providerId });
     sendJson(response, 200, { config: readConfigSummary(getProfile(id)) });
+    return;
+  }
+  if (method === "POST" && action === "repair") {
+    sendJson(response, 200, { status: "ok", config: repairConfig(getProfile(id)) });
     return;
   }
   sendJson(response, 404, { status: "error", message: "Not found" });

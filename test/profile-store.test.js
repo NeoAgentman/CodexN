@@ -27,6 +27,10 @@ test("creates isolated profile directories and config", () => {
   assert.ok(profile.codexHome.startsWith(root));
   assert.ok(profile.electronUserData.startsWith(root));
   assert.ok(fs.existsSync(path.join(profile.codexHome, "config.toml")));
+  assert.doesNotMatch(
+    fs.readFileSync(path.join(profile.codexHome, "config.toml"), "utf8"),
+    /\[model_providers\.openai\]/,
+  );
   assert.deepEqual(listProfiles(root).map((item) => item.id), ["work"]);
 });
 
@@ -46,10 +50,20 @@ test("upserts provider and switches model_provider", () => {
 
   const summary = readConfigSummary(profile);
   assert.equal(summary.modelProvider, "custom");
-  assert.deepEqual(summary.providers.sort(), ["custom", "openai"]);
+  assert.deepEqual(summary.providers.sort(), ["custom"]);
   const text = fs.readFileSync(summary.path, "utf8");
   assert.match(text, /base_url = "https:\/\/example\.test\/v1"/);
   assert.match(text, /env_key = "CUSTOM_KEY"/);
+});
+
+test("refuses to override built-in providers", () => {
+  const root = tempRoot();
+  const profile = createProfile({ id: "work", name: "Work" }, root);
+
+  assert.throws(
+    () => upsertProvider(profile, { id: "openai", name: "OpenAI" }),
+    /Refusing to override built-in provider/,
+  );
 });
 
 test("doctor treats missing auth as non-fatal for new profiles", () => {
