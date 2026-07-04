@@ -6,22 +6,20 @@ Each profile owns isolated paths for:
 
 - `CODEX_HOME`
 - `CODEX_ELECTRON_USER_DATA_PATH`
-- Codex `config.toml` after Codex or an explicit config command creates it
-- Codex `auth.json` after login
+- Codex `config.toml` and `auth.json` after Codex creates them
 - local sessions, sqlite state, logs, and plugins under that home
 
-This lets `personal`, `work`, `relay`, or other profiles use different Codex accounts and providers without sharing the default `~/.codex` state.
+This lets `personal`, `work`, or other profiles use different Codex accounts and providers without sharing the default `~/.codex` or Desktop user data state.
 
 ## Quick Start
 
 ```bash
 npm link
+codexn import-default default
 codexn init personal --name Personal
 codexn init work --name Work
-codexn login work
 codexn desktop work
-codexn terminal work
-codexn gui
+codexn cli work -- --help
 ```
 
 Profile data is stored in `~/.codex-profiles` by default. Override it with `CODEXN_ROOT`.
@@ -30,17 +28,12 @@ Profile data is stored in `~/.codex-profiles` by default. Override it with `CODE
 
 ```bash
 codexn init <id> [--name <name>]
+codexn import-default <id> [--name <name>]
 codexn list [--json]
-codexn doctor <id> [--json]
-codexn desktop <id> [--project <path>]
-codexn terminal <id> [--project <path>]
+codexn desktop <id> [--project <path>] [--app <Codex|/path/Codex.app>]
 codexn cli <id> -- <codex args...>
-codexn login <id>
-codexn provider <id> set --id <provider> [--base-url <url>] [--api-key <key>] [--model <model>]
 codexn backup <id>
-codexn import-current <id>
-codexn reveal <id>
-codexn gui
+codexn remove <id> [--yes]
 ```
 
 ## Desktop Isolation
@@ -55,25 +48,18 @@ CODEX_ELECTRON_USER_DATA_PATH=<profile>/electron-user-data
 
 Codex Desktop itself handles multi-window startup. CodexN does not clone or patch the app bundle.
 
-`init` only creates the profile registry entry and empty isolated directories. It does not create `config.toml`, `auth.json`, sessions, or any other Codex-owned configuration. The first `codexn login`, `codexn terminal`, `codexn cli`, or `codexn desktop` run lets Codex initialize that profile's `CODEX_HOME` itself.
+`init` only creates the profile registry entry and empty isolated directories. It does not create `config.toml`, `auth.json`, sessions, or any other Codex-owned configuration. The first `codexn cli` or `codexn desktop` run lets Codex initialize that profile's `CODEX_HOME` itself.
 
-## Provider Setup
+`import-default` creates a new profile and copies both default locations into it:
 
-Example:
-
-```bash
-codexn provider work set \
-  --id relay \
-  --name Relay \
-  --base-url https://api.example.com/v1 \
-  --api-key RELAY_API_KEY \
-  --model gpt-5.2-codex
+```text
+~/.codex -> <profile>/codex-home
+~/Library/Application Support/Codex -> <profile>/electron-user-data
 ```
-
-If `--api-key` starts with `sk-`, CodexN writes it as `experimental_bearer_token`. Otherwise it writes the value as `env_key`.
 
 ## Safety Notes
 
 - Do not run multiple Desktop windows against the same profile at the same time unless you are comfortable with shared SQLite/session writes.
-- `import-current` copies your current `~/.codex` into the selected profile and may overwrite files in that profile.
+- `init` refuses to reuse a non-empty profile directory. Pick a new id or clean the old directory first.
+- `import-default` requires a new profile id and copies the current default Codex CLI and Desktop data into that profile.
 - `remove` creates a backup archive before removing the profile from the registry, but it does not delete profile files from disk.

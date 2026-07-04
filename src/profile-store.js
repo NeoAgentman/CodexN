@@ -11,7 +11,6 @@ import {
   profileLogDir,
   storePath,
 } from "./paths.js";
-import { readConfigSummary } from "./config-toml.js";
 
 const STORE_VERSION = 1;
 
@@ -73,28 +72,6 @@ export function createProfile({ id, name = id }, root = defaultRoot()) {
   return profile;
 }
 
-export function updateProfile(id, patch, root = defaultRoot()) {
-  const store = loadStore(root);
-  const index = store.profiles.findIndex((item) => item.id === id);
-  if (index === -1) throw new Error(`Profile not found: ${id}`);
-  const next = normalizeProfile(
-    {
-      ...store.profiles[index],
-      ...patch,
-      updatedAt: new Date().toISOString(),
-    },
-    root,
-  );
-  materializeProfile(next);
-  store.profiles[index] = next;
-  saveStore(store, root);
-  return next;
-}
-
-export function renameProfile(id, name, root = defaultRoot()) {
-  return updateProfile(id, { name }, root);
-}
-
 export function deleteProfile(id, root = defaultRoot()) {
   const store = loadStore(root);
   const index = store.profiles.findIndex((item) => item.id === id);
@@ -119,15 +96,6 @@ export function backupProfile(id, root = defaultRoot()) {
     throw new Error(result.stderr?.trim() || `ditto exited with code ${result.status}`);
   }
   return target;
-}
-
-export function revealProfile(id, root = defaultRoot()) {
-  const profile = getProfile(id, root);
-  const result = spawnSync("open", [path.dirname(profile.codexHome)], { encoding: "utf8" });
-  if (result.status !== 0) {
-    throw new Error(result.stderr?.trim() || `open exited with code ${result.status}`);
-  }
-  return path.dirname(profile.codexHome);
 }
 
 export function normalizeProfile(profile, root = defaultRoot()) {
@@ -193,61 +161,12 @@ export function importDefaultProfile(
   return profile;
 }
 
-export function importCurrentCodex(profile) {
-  const current = path.join(os.homedir(), ".codex");
-  if (!fs.existsSync(current)) throw new Error("Current ~/.codex does not exist.");
-  fs.mkdirSync(profile.codexHome, { recursive: true });
-  copyDirectory(current, profile.codexHome);
-}
-
 export function profileEnv(profile) {
   return {
     ...process.env,
     CODEX_HOME: profile.codexHome,
     CODEX_ELECTRON_USER_DATA_PATH: profile.electronUserData,
   };
-}
-
-export function doctorProfile(id, root = defaultRoot()) {
-  const profile = getProfile(id, root);
-  const config = readConfigSummary(profile);
-  const checks = [
-    {
-      label: "Codex home",
-      ok: fs.existsSync(profile.codexHome),
-      detail: profile.codexHome,
-    },
-    {
-      label: "Electron user data",
-      ok: fs.existsSync(profile.electronUserData),
-      detail: profile.electronUserData,
-    },
-    {
-      label: "config.toml",
-      ok: fs.existsSync(path.join(profile.codexHome, "config.toml")),
-      detail: path.join(profile.codexHome, "config.toml"),
-      optional: true,
-    },
-    {
-      label: "auth.json",
-      ok: fs.existsSync(path.join(profile.codexHome, "auth.json")),
-      detail: path.join(profile.codexHome, "auth.json"),
-      optional: true,
-    },
-    {
-      label: "Codex.app",
-      ok: fs.existsSync(profile.appBundle),
-      detail: profile.appBundle,
-    },
-    {
-      label: "Built-in provider overrides",
-      ok: config.builtInOverrides.length === 0,
-      detail: config.builtInOverrides.length
-        ? `Remove sections: ${config.builtInOverrides.join(", ")}`
-        : "none",
-    },
-  ];
-  return { profile, checks, ok: checks.every((check) => check.ok || check.optional) };
 }
 
 function timestamp() {

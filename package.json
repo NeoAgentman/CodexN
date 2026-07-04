@@ -7,9 +7,9 @@
     "codexn": "./bin/codexn.js"
   },
   "scripts": {
-    "start": "node ./bin/codexn.js gui",
+    "start": "node ./bin/codexn.js",
     "test": "node --test",
-    "check": "node --check ./bin/codexn.js && node --check ./src/profile-store.js && node --check ./src/config-toml.js && node --check ./src/macos-launch.js && node --check ./src/server.js && node --check ./public/app.js"
+    "check": "node --check ./bin/codexn.js && node --check ./src/profile-store.js && node --check ./src/macos-launch.js && node --check ./src/paths.js"
   },
   "engines": {
     "node": ">=20"

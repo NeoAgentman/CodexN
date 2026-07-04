@@ -1,34 +1,15 @@
 #!/usr/bin/env node
-import { existsSync } from "node:fs";
-import path from "node:path";
 import process from "node:process";
 import {
-  createProfile,
   backupProfile,
+  createProfile,
   deleteProfile,
-  doctorProfile,
   ensureStore,
   getProfile,
-  importCurrentCodex,
+  importDefaultProfile,
   listProfiles,
-  renameProfile,
-  revealProfile,
-  updateProfile,
 } from "../src/profile-store.js";
-import {
-  readConfigSummary,
-  repairConfig,
-  setModelProvider,
-  upsertProvider,
-  writeRootConfigValue,
-} from "../src/config-toml.js";
-import {
-  openCliInTerminal,
-  openCodexDesktop,
-  openLoginInTerminal,
-  runCodexCli,
-} from "../src/macos-launch.js";
-import { startServer } from "../src/server.js";
+import { openCodexDesktop, runCodexCli } from "../src/macos-launch.js";
 
 const args = process.argv.slice(2);
 
@@ -37,22 +18,12 @@ function usage() {
 
 Usage:
   codexn init <id> [--name <name>]
+  codexn import-default <id> [--name <name>]
   codexn list [--json]
-  codexn doctor <id> [--json]
   codexn desktop <id> [--project <path>] [--app <Codex|/path/Codex.app>]
   codexn cli <id> [-- <codex args...>]
-  codexn terminal <id> [--project <path>] [-- <codex args...>]
-  codexn login <id>
   codexn backup <id>
-  codexn import-current <id>
-  codexn reveal <id>
-  codexn config <id> get
-  codexn repair <id>
-  codexn config <id> set <key> <value>
-  codexn provider <id> set --id <provider> [--name <name>] [--base-url <url>] [--api-key <key>] [--model <model>] [--wire-api <responses|chat>]
-  codexn rename <id> <name>
   codexn remove <id> [--yes]
-  codexn gui [--port <port>] [--no-open]
 
 Profile data defaults to ~/.codex-profiles. Override with CODEXN_ROOT.`;
 }
@@ -111,6 +82,13 @@ async function main() {
       printJson({ status: "created", profile });
       return;
     }
+    case "import-default": {
+      const id = requireId(args.shift());
+      const name = takeFlag("--name") ?? id;
+      const profile = importDefaultProfile({ id, name });
+      printJson({ status: "imported", profile });
+      return;
+    }
     case "list": {
       const json = hasFlag("--json");
       const profiles = listProfiles();
@@ -121,19 +99,6 @@ async function main() {
       } else {
         for (const profile of profiles) {
           process.stdout.write(`${profile.id}\t${profile.name}\t${profile.codexHome}\n`);
-        }
-      }
-      return;
-    }
-    case "doctor": {
-      const id = requireId(args.shift());
-      const json = hasFlag("--json");
-      const report = doctorProfile(id);
-      if (json) printJson(report);
-      else {
-        process.stdout.write(`${report.profile.id} (${report.profile.name})\n`);
-        for (const check of report.checks) {
-          process.stdout.write(`${check.ok ? "OK" : "!!"} ${check.label}: ${check.detail}\n`);
         }
       }
       return;
@@ -155,87 +120,9 @@ async function main() {
       process.exitCode = code;
       return;
     }
-    case "terminal": {
-      const id = requireId(args.shift());
-      const project = takeFlag("--project");
-      const [, passthrough] = splitPassthrough(args);
-      const profile = getProfile(id);
-      await openCliInTerminal(profile, { project, args: passthrough });
-      process.stdout.write(`Opened Terminal for ${profile.id}.\n`);
-      return;
-    }
-    case "login": {
-      const id = requireId(args.shift());
-      const profile = getProfile(id);
-      await openLoginInTerminal(profile);
-      process.stdout.write(`Opened login Terminal for ${profile.id}.\n`);
-      return;
-    }
     case "backup": {
       const id = requireId(args.shift());
       printJson({ backupPath: backupProfile(id) });
-      return;
-    }
-    case "import-current": {
-      const id = requireId(args.shift());
-      const profile = getProfile(id);
-      importCurrentCodex(profile);
-      printJson({ status: "imported", profile: getProfile(id) });
-      return;
-    }
-    case "reveal": {
-      const id = requireId(args.shift());
-      printJson({ path: revealProfile(id) });
-      return;
-    }
-    case "config": {
-      const id = requireId(args.shift());
-      const sub = args.shift();
-      const profile = getProfile(id);
-      if (sub === "get") {
-        printJson(readConfigSummary(profile));
-        return;
-      }
-      if (sub === "set") {
-        const key = args.shift();
-        const value = args.shift();
-        if (!key || value == null) throw new Error("Usage: codexn config <id> set <key> <value>");
-        writeRootConfigValue(profile, key, value);
-        printJson(readConfigSummary(profile));
-        return;
-      }
-      throw new Error("Usage: codexn config <id> get|set");
-    }
-    case "repair": {
-      const id = requireId(args.shift());
-      printJson({ config: repairConfig(getProfile(id)) });
-      return;
-    }
-    case "provider": {
-      const id = requireId(args.shift());
-      const sub = args.shift();
-      if (sub !== "set") throw new Error("Usage: codexn provider <id> set --id <provider>");
-      const providerId = takeFlag("--id");
-      if (!providerId) throw new Error("--id is required.");
-      const profile = getProfile(id);
-      upsertProvider(profile, {
-        id: providerId,
-        name: takeFlag("--name") ?? providerId,
-        baseUrl: takeFlag("--base-url"),
-        apiKey: takeFlag("--api-key"),
-        model: takeFlag("--model"),
-        wireApi: takeFlag("--wire-api"),
-      });
-      setModelProvider(profile, providerId);
-      updateProfile(id, { defaultProvider: providerId });
-      printJson(readConfigSummary(getProfile(id)));
-      return;
-    }
-    case "rename": {
-      const id = requireId(args.shift());
-      const name = args.join(" ").trim();
-      if (!name) throw new Error("New name is required.");
-      printJson({ profile: renameProfile(id, name) });
       return;
     }
     case "remove": {
@@ -243,14 +130,6 @@ async function main() {
       if (!hasFlag("--yes")) throw new Error("Refusing to remove without --yes.");
       const backupPath = backupProfile(id);
       printJson({ backupPath, removed: deleteProfile(id) });
-      return;
-    }
-    case "gui": {
-      const portRaw = takeFlag("--port");
-      const port = portRaw ? Number(portRaw) : 14573;
-      const noOpen = hasFlag("--no-open");
-      const server = await startServer({ port, openBrowser: !noOpen });
-      process.stdout.write(`CodexN GUI: http://127.0.0.1:${server.port}\n`);
       return;
     }
     default:

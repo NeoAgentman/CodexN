@@ -31,7 +31,3 @@ export function profileLogDir(root, id) {
 export function storePath(root = defaultRoot()) {
   return path.join(root, "profiles.json");
 }
-
-export function shellQuote(value) {
-  return `'${String(value).replaceAll("'", "'\\''")}'`;
-}
