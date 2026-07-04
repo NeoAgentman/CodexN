@@ -147,12 +147,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private func presentSettingsWindow(_ controller: SettingsWindowController) {
         controller.showWindow(nil)
         if let window = controller.window {
-            let screen = statusItem?.button?.window?.screen ?? window.screen ?? NSScreen.main
-            if let visibleFrame = screen?.visibleFrame {
-                window.setFrame(visibleFrame, display: true, animate: false)
-            } else {
-                window.center()
-            }
+            window.setContentSize(NSSize(width: 780, height: 520))
+            window.center()
             window.makeKeyAndOrderFront(nil)
         }
         NSApp.activate(ignoringOtherApps: true)
