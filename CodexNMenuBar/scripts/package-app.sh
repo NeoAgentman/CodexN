@@ -5,6 +5,9 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 APP="$ROOT/CodexN.app"
 EXECUTABLE="$ROOT/.build/release/CodexNMenuBar"
 ICON="$ROOT/Assets/CodexN.icns"
+VERSION="${CODEXN_VERSION:-0.1.5}"
+BUILD="${CODEXN_BUILD:-$(git -C "$ROOT" rev-list --count HEAD 2>/dev/null || echo 1)}"
+BUILD_DATE="${CODEXN_BUILD_DATE:-$(date -u "+%Y-%m-%d %H:%M:%S UTC")}"
 
 cd "$ROOT"
 swift build -c release --product CodexNMenuBar
@@ -14,7 +17,7 @@ mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$EXECUTABLE" "$APP/Contents/MacOS/CodexN"
 cp "$ICON" "$APP/Contents/Resources/CodexN.icns"
 
-cat > "$APP/Contents/Info.plist" <<'PLIST'
+cat > "$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
   "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -37,9 +40,11 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
   <key>CFBundlePackageType</key>
   <string>APPL</string>
   <key>CFBundleShortVersionString</key>
-  <string>0.1.0</string>
+  <string>$VERSION</string>
   <key>CFBundleVersion</key>
-  <string>1</string>
+  <string>$BUILD</string>
+  <key>CodexNBuildDate</key>
+  <string>$BUILD_DATE</string>
   <key>LSMinimumSystemVersion</key>
   <string>14.0</string>
   <key>LSUIElement</key>

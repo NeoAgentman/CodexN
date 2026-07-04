@@ -82,6 +82,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(menuItem("Settings...", symbol: "gearshape", action: #selector(settingsFromMenu)))
         menu.addItem(menuItem("Open Profiles Folder", symbol: "folder", action: #selector(openProfilesFolderFromMenu)))
         menu.addItem(.separator())
+        menu.addItem(menuItem("About...", symbol: "info.circle", action: #selector(aboutFromMenu)))
         menu.addItem(menuItem("Quit", symbol: "xmark.rectangle", action: #selector(quitFromMenu)))
     }
 
@@ -125,13 +126,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
     }
 
-    private func showSettingsWindow() {
+    private func showSettingsWindow(selection: SettingsPane = .general) {
         if let controller = settingsWindowController {
+            controller.select(selection)
             presentSettingsWindow(controller)
             return
         }
 
-        let controller = SettingsWindowController(store: store) { [weak self] in
+        let controller = SettingsWindowController(store: store, initialSelection: selection) { [weak self] in
             self?.rebuildMenu()
         }
         controller.onClose = { [weak self] in
@@ -157,7 +159,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     @objc private func settingsFromMenu() {
         statusMenu?.cancelTracking()
-        showSettingsWindow()
+        showSettingsWindow(selection: .general)
+    }
+
+    @objc private func aboutFromMenu() {
+        statusMenu?.cancelTracking()
+        showSettingsWindow(selection: .about)
     }
 
     @objc private func openProfilesFolderFromMenu() {
@@ -260,16 +267,22 @@ private struct ProfileMenuHeader: View {
 }
 
 @MainActor
-final class SettingsWindowController: NSWindowController, NSWindowDelegate {
+private final class SettingsWindowController: NSWindowController, NSWindowDelegate {
     var onClose: (() -> Void)?
+    private let store: ProfileStore
+    private let onComplete: () -> Void
+    private let hosting: NSHostingController<SettingsRootView>
 
-    init(store: ProfileStore, onComplete: @escaping () -> Void) {
+    init(store: ProfileStore, initialSelection: SettingsPane, onComplete: @escaping () -> Void) {
+        self.store = store
+        self.onComplete = onComplete
         let content = SettingsRootView(
             store: store,
+            initialSelection: initialSelection,
             onClose: {},
             onComplete: onComplete
         )
-        let hosting = NSHostingController(rootView: content)
+        self.hosting = NSHostingController(rootView: content)
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 780, height: 520),
             styleMask: [.titled, .closable, .miniaturizable],
@@ -280,14 +293,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         window.contentViewController = hosting
         super.init(window: window)
         window.delegate = self
-        hosting.rootView = SettingsRootView(
-            store: store,
-            onClose: { [weak self] in self?.close() },
-            onComplete: { [weak self] in
-                onComplete()
-                self?.close()
-            }
-        )
+        select(initialSelection)
     }
 
     required init?(coder: NSCoder) {
@@ -297,11 +303,24 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
     func windowWillClose(_ notification: Notification) {
         onClose?()
     }
+
+    func select(_ selection: SettingsPane) {
+        hosting.rootView = SettingsRootView(
+            store: store,
+            initialSelection: selection,
+            onClose: { [weak self] in self?.close() },
+            onComplete: { [weak self] in
+                self?.onComplete()
+                self?.close()
+            }
+        )
+    }
 }
 
 private enum SettingsPane: String, CaseIterable, Identifiable {
     case general
     case profiles
+    case about
 
     var id: String { rawValue }
 
@@ -309,6 +328,7 @@ private enum SettingsPane: String, CaseIterable, Identifiable {
         switch self {
         case .general: "General"
         case .profiles: "Profiles"
+        case .about: "About"
         }
     }
 
@@ -316,6 +336,7 @@ private enum SettingsPane: String, CaseIterable, Identifiable {
         switch self {
         case .general: "gearshape"
         case .profiles: "person.2"
+        case .about: "info.circle"
         }
     }
 
@@ -323,17 +344,32 @@ private enum SettingsPane: String, CaseIterable, Identifiable {
         switch self {
         case .general: .gray
         case .profiles: .blue
+        case .about: .indigo
         }
     }
 }
 
 private struct SettingsRootView: View {
     let store: ProfileStore
+    let initialSelection: SettingsPane
     let onClose: () -> Void
     let onComplete: () -> Void
 
-    @State private var selection: SettingsPane = .general
+    @State private var selection: SettingsPane
     @State private var columnVisibility: NavigationSplitViewVisibility = .doubleColumn
+
+    init(
+        store: ProfileStore,
+        initialSelection: SettingsPane,
+        onClose: @escaping () -> Void,
+        onComplete: @escaping () -> Void
+    ) {
+        self.store = store
+        self.initialSelection = initialSelection
+        self.onClose = onClose
+        self.onComplete = onComplete
+        self._selection = State(initialValue: initialSelection)
+    }
 
     var body: some View {
         NavigationSplitView(columnVisibility: $columnVisibility) {
@@ -362,11 +398,15 @@ private struct SettingsRootView: View {
                     onComplete: onComplete
                 )
                 .navigationTitle(SettingsPane.profiles.title)
+            case .about:
+                AboutSettingsPane()
+                    .navigationTitle(SettingsPane.about.title)
             }
         }
         .frame(minWidth: 720, idealWidth: 780, minHeight: 480, idealHeight: 520)
         .onAppear {
             columnVisibility = .doubleColumn
+            selection = initialSelection
         }
     }
 }
@@ -450,6 +490,77 @@ private struct GeneralSettingsPane: View {
             errorMessage = String(describing: error)
             launchAtLogin = LaunchAtLoginManager.isEnabled
         }
+    }
+}
+
+private struct AboutSettingsPane: View {
+    private let appName = "CodexN"
+    private let repositoryURL = URL(string: "https://github.com/NeoAgentman/CodexN")!
+
+    var body: some View {
+        Form {
+            Section {
+                VStack(spacing: 12) {
+                    Image(nsImage: NSApp.applicationIconImage)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 76, height: 76)
+                        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+
+                    VStack(spacing: 3) {
+                        Text(appName)
+                            .font(.title2.weight(.semibold))
+                        Text("Codex profile launcher")
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+            }
+
+            Section("Version") {
+                LabeledContent("Version", value: appVersion)
+                LabeledContent("Build", value: buildNumber)
+                LabeledContent("Built", value: buildDate)
+            }
+
+            Section("Project") {
+                Button {
+                    NSWorkspace.shared.open(repositoryURL)
+                } label: {
+                    HStack {
+                        SettingsRowLabel("GitHub", subtitle: "NeoAgentman/CodexN")
+                        Spacer()
+                        Image(systemName: "arrow.up.right")
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .formStyle(.grouped)
+    }
+
+    private var appVersion: String {
+        infoValue("CFBundleShortVersionString", fallback: "0.1.5")
+    }
+
+    private var buildNumber: String {
+        infoValue("CFBundleVersion", fallback: "Development")
+    }
+
+    private var buildDate: String {
+        infoValue("CodexNBuildDate", fallback: "Development build")
+    }
+
+    private func infoValue(_ key: String, fallback: String) -> String {
+        guard let value = Bundle.main.object(forInfoDictionaryKey: key) as? String,
+              !value.isEmpty
+        else {
+            return fallback
+        }
+        return value
     }
 }
 
