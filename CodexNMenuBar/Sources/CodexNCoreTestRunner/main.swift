@@ -8,6 +8,7 @@ struct TestRunner {
         try refusesToCreateOverNonEmptyProfileDirectory()
         try importsDefaultCodexHomeAndElectronData()
         try buildsLaunchCommandsWithProfileIsolation()
+        try readsNodeGeneratedProfileRegistry()
         print("CodexNCoreTestRunner: all tests passed")
     }
 
@@ -114,6 +115,34 @@ struct TestRunner {
         try expect(terminalScript.contains("export CODEX_HOME="), "terminal script should export CODEX_HOME")
         try expect(terminalScript.contains("export CODEX_ELECTRON_USER_DATA_PATH="), "terminal script should export electron user data")
         try expect(terminalScript.hasSuffix("; codex"), "terminal script should run codex")
+    }
+
+    private static func readsNodeGeneratedProfileRegistry() throws {
+        let root = try temporaryDirectory()
+        let json = """
+        {
+          "version": 1,
+          "profiles": [
+            {
+              "id": "zl",
+              "name": "zl",
+              "codexHome": "\(root.path)/zl/codex-home",
+              "electronUserData": "\(root.path)/zl/electron-user-data",
+              "logDir": "\(root.path)/zl/logs",
+              "appBundle": "/Applications/Codex.app",
+              "defaultProvider": "openai",
+              "createdAt": "2026-07-04T05:54:08.746Z",
+              "updatedAt": "2026-07-04T05:54:08.751Z"
+            }
+          ]
+        }
+        """
+        try json.write(to: root.appending(path: "profiles.json"), atomically: true, encoding: .utf8)
+
+        let store = ProfileStore(root: root)
+        let profiles = try store.listProfiles()
+
+        try expect(profiles.map(\.id) == ["zl"], "should decode Node-generated registry timestamps")
     }
 
     private static func expect(_ condition: @autoclosure () throws -> Bool, _ message: String) throws {

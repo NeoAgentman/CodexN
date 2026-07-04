@@ -160,14 +160,27 @@ public final class ProfileStore {
         try ensureStore()
         let data = try Data(contentsOf: storeURL)
         let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
+        decoder.dateDecodingStrategy = .custom { decoder in
+            let container = try decoder.singleValueContainer()
+            let value = try container.decode(String.self)
+            if let date = parseCodexNDate(value) {
+                return date
+            }
+            throw DecodingError.dataCorruptedError(
+                in: container,
+                debugDescription: "Expected CodexN ISO8601 date string."
+            )
+        }
         return try decoder.decode(Store.self, from: data)
     }
 
     private func save(_ store: Store) throws {
         try fileManager.createDirectory(at: root, withIntermediateDirectories: true)
         let encoder = JSONEncoder()
-        encoder.dateEncodingStrategy = .iso8601
+        encoder.dateEncodingStrategy = .custom { date, encoder in
+            var container = encoder.singleValueContainer()
+            try container.encode(formatCodexNDate(date))
+        }
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         let data = try encoder.encode(store)
         try data.write(to: storeURL)
@@ -229,6 +242,27 @@ private func timestamp() -> String {
     formatter.timeZone = TimeZone(secondsFromGMT: 0)
     formatter.dateFormat = "yyyyMMdd-HHmmss"
     return formatter.string(from: Date())
+}
+
+private func parseCodexNDate(_ value: String) -> Date? {
+    let fractionalFormatter = ISO8601DateFormatter()
+    fractionalFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+    fractionalFormatter.timeZone = TimeZone(secondsFromGMT: 0)
+    if let date = fractionalFormatter.date(from: value) {
+        return date
+    }
+
+    let plainFormatter = ISO8601DateFormatter()
+    plainFormatter.formatOptions = [.withInternetDateTime]
+    plainFormatter.timeZone = TimeZone(secondsFromGMT: 0)
+    return plainFormatter.date(from: value)
+}
+
+private func formatCodexNDate(_ date: Date) -> String {
+    let formatter = ISO8601DateFormatter()
+    formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+    formatter.timeZone = TimeZone(secondsFromGMT: 0)
+    return formatter.string(from: date)
 }
 
 private func expandHome(_ value: String) -> String {
