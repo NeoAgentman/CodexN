@@ -203,8 +203,8 @@ final class AddProfileWindowController: NSWindowController, NSWindowDelegate {
 
     private let store: ProfileStore
     private let onComplete: () -> Void
-    private let formWidth: CGFloat = 420
-    private let labelWidth: CGFloat = 108
+    private let formWidth: CGFloat = 402
+    private let labelWidth: CGFloat = 90
     private let controlWidth: CGFloat = 300
     private let idField = NSTextField(string: "")
     private let nameField = NSTextField(string: "")
@@ -376,7 +376,8 @@ final class AddProfileWindowController: NSWindowController, NSWindowDelegate {
     private func fieldLabel(_ text: String) -> NSTextField {
         let label = NSTextField(labelWithString: text)
         label.font = .systemFont(ofSize: NSFont.smallSystemFontSize)
-        label.alignment = .right
+        label.alignment = .left
+        label.lineBreakMode = .byTruncatingTail
         return label
     }
 
