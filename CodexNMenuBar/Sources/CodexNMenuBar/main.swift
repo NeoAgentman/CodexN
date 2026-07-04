@@ -80,8 +80,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         menu.addItem(.separator())
         menu.addItem(menuItem("Settings...", symbol: "gearshape", action: #selector(settingsFromMenu)))
-        menu.addItem(.separator())
         menu.addItem(menuItem("Open Profiles Folder", symbol: "folder", action: #selector(openProfilesFolderFromMenu)))
+        menu.addItem(.separator())
         menu.addItem(menuItem("Quit", symbol: "xmark.rectangle", action: #selector(quitFromMenu)))
     }
 
