@@ -10,6 +10,7 @@ struct TestRunner {
         try createsAPIKeyProfileWithoutLeakingKeyToConfig()
         try rejectsInvalidAPIKeyProviderID()
         try buildsLaunchCommandsWithProfileIsolation()
+        try injectsAPIKeyEnvironmentIntoLaunchCommands()
         try readsNodeGeneratedProfileRegistry()
         try buildsDefaultLaunchCommandsWithoutProfileIsolation()
         print("CodexNCoreTestRunner: all tests passed")
@@ -164,6 +165,36 @@ struct TestRunner {
         try expect(terminalScript.hasSuffix("; codex"), "terminal script should run codex")
     }
 
+    private static func injectsAPIKeyEnvironmentIntoLaunchCommands() throws {
+        let root = try temporaryDirectory()
+        let store = ProfileStore(root: root)
+        let profile = try store.createAPIKeyProfile(
+            id: "api",
+            provider: "zl",
+            model: "gpt-5.5",
+            baseURL: "https://api.example.test/v1",
+            apiKey: "sk-test secret"
+        )
+        let launcher = Launcher()
+        let envName = try require(profile.apiKeyEnvName, "API key env name should exist")
+
+        let desktopArguments = launcher.desktopOpenArguments(profile: profile)
+        try expect(
+            desktopArguments.contains("\(envName)=sk-test secret"),
+            "desktop args should include API key env"
+        )
+        try expect(
+            desktopArguments.firstIndex(of: "\(envName)=sk-test secret")! < desktopArguments.firstIndex(of: "--args")!,
+            "desktop API key env should appear before --args"
+        )
+
+        let terminalScript = launcher.terminalScript(profile: profile)
+        try expect(
+            terminalScript.contains("export \(envName)='sk-test secret'"),
+            "terminal script should export API key env"
+        )
+    }
+
     private static func readsNodeGeneratedProfileRegistry() throws {
         let root = try temporaryDirectory()
         let json = """
@@ -208,6 +239,13 @@ struct TestRunner {
         if try !condition() {
             throw TestFailure(message)
         }
+    }
+
+    private static func require<T>(_ value: T?, _ message: String) throws -> T {
+        guard let value else {
+            throw TestFailure(message)
+        }
+        return value
     }
 }
 

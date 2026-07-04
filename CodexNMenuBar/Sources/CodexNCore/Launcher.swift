@@ -20,10 +20,15 @@ public struct Launcher {
             "-n",
             appURL.path,
             "--env", "CODEX_HOME=\(profile.codexHome.path)",
-            "--env", "CODEX_ELECTRON_USER_DATA_PATH=\(profile.electronUserData.path)",
+            "--env", "CODEX_ELECTRON_USER_DATA_PATH=\(profile.electronUserData.path)"
+        ]
+        if let apiKeyEnvironment = apiKeyEnvironment(profile) {
+            arguments.append(contentsOf: ["--env", "\(apiKeyEnvironment.name)=\(apiKeyEnvironment.value)"])
+        }
+        arguments.append(contentsOf: [
             "--args",
             "--user-data-dir=\(profile.electronUserData.path)"
-        ]
+        ])
         if let project {
             arguments.append(project.path)
         }
@@ -39,12 +44,16 @@ public struct Launcher {
     }
 
     public func terminalScript(profile: Profile, cwd: URL = FileManager.default.homeDirectoryForCurrentUser) -> String {
-        [
+        var commands = [
             "cd \(shellQuote(cwd.path))",
             "export CODEX_HOME=\(shellQuote(profile.codexHome.path))",
-            "export CODEX_ELECTRON_USER_DATA_PATH=\(shellQuote(profile.electronUserData.path))",
-            "codex"
-        ].joined(separator: "; ")
+            "export CODEX_ELECTRON_USER_DATA_PATH=\(shellQuote(profile.electronUserData.path))"
+        ]
+        if let apiKeyEnvironment = apiKeyEnvironment(profile) {
+            commands.append("export \(apiKeyEnvironment.name)=\(shellQuote(apiKeyEnvironment.value))")
+        }
+        commands.append("codex")
+        return commands.joined(separator: "; ")
     }
 
     public func defaultTerminalScript(cwd: URL = FileManager.default.homeDirectoryForCurrentUser) -> String {
@@ -82,6 +91,12 @@ public struct Launcher {
             throw LauncherError.processFailed(executable, process.terminationStatus)
         }
     }
+}
+
+private func apiKeyEnvironment(_ profile: Profile) -> (name: String, value: String)? {
+    guard let name = profile.apiKeyEnvName, !name.isEmpty else { return nil }
+    guard let value = profile.apiKeyValue, !value.isEmpty else { return nil }
+    return (name, value)
 }
 
 private func shellQuote(_ value: String) -> String {
