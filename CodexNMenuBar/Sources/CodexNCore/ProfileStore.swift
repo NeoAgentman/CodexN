@@ -8,6 +8,8 @@ public struct Profile: Codable, Equatable, Identifiable {
     public var logDir: URL
     public var appBundle: URL
     public var defaultProvider: String
+    public var apiKeyEnvName: String?
+    public var apiKeyValue: String?
     public var createdAt: Date
     public var updatedAt: Date
 }
@@ -19,6 +21,8 @@ public enum ProfileStoreError: Error, CustomStringConvertible {
     case profileDirectoryNotEmpty(URL)
     case missingSourceDirectory(URL)
     case processFailed(String, Int32)
+    case invalidProviderID(String)
+    case emptyRequiredField(String)
 
     public var description: String {
         switch self {
@@ -34,6 +38,10 @@ public enum ProfileStoreError: Error, CustomStringConvertible {
             return "Source directory does not exist: \(url.path)"
         case .processFailed(let command, let code):
             return "\(command) exited with code \(code)"
+        case .invalidProviderID(let id):
+            return "Invalid provider id: \(id)"
+        case .emptyRequiredField(let field):
+            return "\(field) is required"
         }
     }
 }
@@ -132,6 +140,40 @@ public final class ProfileStore {
     }
 
     @discardableResult
+    public func createAPIKeyProfile(
+        id: String,
+        name: String? = nil,
+        provider: String,
+        model: String,
+        baseURL: String,
+        apiKey: String
+    ) throws -> Profile {
+        try validateProfileID(id)
+        try validateProviderID(provider)
+        try validateRequired("model", model)
+        try validateRequired("base URL", baseURL)
+        try validateRequired("API key", apiKey)
+
+        var store = try load()
+        if store.profiles.contains(where: { $0.id == id }) {
+            throw ProfileStoreError.profileAlreadyExists(id)
+        }
+
+        let envName = randomAPIKeyEnvName(profileID: id)
+        var profile = makeProfile(id: id, name: name ?? id)
+        profile.defaultProvider = provider
+        profile.apiKeyEnvName = envName
+        profile.apiKeyValue = apiKey
+
+        try assertProfileRootAvailable(profile)
+        try materialize(profile)
+        try writeAPIKeyConfig(profile: profile, provider: provider, model: model, baseURL: baseURL, envName: envName)
+        store.profiles.append(profile)
+        try save(store)
+        return profile
+    }
+
+    @discardableResult
     public func deleteProfile(id: String) throws -> Profile {
         var store = try load()
         guard let index = store.profiles.firstIndex(where: { $0.id == id }) else {
@@ -197,6 +239,8 @@ public final class ProfileStore {
             logDir: profileRoot.appending(path: "logs"),
             appBundle: URL(filePath: "/Applications/Codex.app"),
             defaultProvider: "openai",
+            apiKeyEnvName: nil,
+            apiKeyValue: nil,
             createdAt: now,
             updatedAt: now
         )
@@ -224,6 +268,34 @@ public final class ProfileStore {
         }
     }
 
+    private func validateProviderID(_ id: String) throws {
+        let pattern = #"^[A-Za-z0-9._-]+$"#
+        if id.range(of: pattern, options: .regularExpression) == nil {
+            throw ProfileStoreError.invalidProviderID(id)
+        }
+    }
+
+    private func validateRequired(_ field: String, _ value: String) throws {
+        if value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            throw ProfileStoreError.emptyRequiredField(field)
+        }
+    }
+
+    private func writeAPIKeyConfig(profile: Profile, provider: String, model: String, baseURL: String, envName: String) throws {
+        let config = """
+        model = "\(tomlString(model))"
+        model_provider = "\(tomlString(provider))"
+
+        [model_providers.\(provider)]
+        name = "\(tomlString(provider))"
+        base_url = "\(tomlString(baseURL))"
+        env_key = "\(tomlString(envName))"
+        wire_api = "responses"
+
+        """
+        try config.write(to: profile.codexHome.appending(path: "config.toml"), atomically: true, encoding: .utf8)
+    }
+
     private func runDitto(arguments: [String]) throws {
         let process = Process()
         process.executableURL = URL(filePath: "/usr/bin/ditto")
@@ -234,6 +306,22 @@ public final class ProfileStore {
             throw ProfileStoreError.processFailed("ditto", process.terminationStatus)
         }
     }
+}
+
+private func randomAPIKeyEnvName(profileID: String) -> String {
+    let sanitized = profileID
+        .uppercased()
+        .map { character in
+            character.isLetter || character.isNumber ? character : "_"
+        }
+    let suffix = UUID().uuidString.replacingOccurrences(of: "-", with: "").prefix(12)
+    return "CODEXN_API_KEY_\(String(sanitized))_\(suffix)"
+}
+
+private func tomlString(_ value: String) -> String {
+    value
+        .replacingOccurrences(of: "\\", with: "\\\\")
+        .replacingOccurrences(of: "\"", with: "\\\"")
 }
 
 private func timestamp() -> String {

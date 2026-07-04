@@ -7,6 +7,8 @@ struct TestRunner {
         try createsEmptyProfileDirectoriesWithoutCodexConfig()
         try refusesToCreateOverNonEmptyProfileDirectory()
         try importsDefaultCodexHomeAndElectronData()
+        try createsAPIKeyProfileWithoutLeakingKeyToConfig()
+        try rejectsInvalidAPIKeyProviderID()
         try buildsLaunchCommandsWithProfileIsolation()
         try readsNodeGeneratedProfileRegistry()
         try buildsDefaultLaunchCommandsWithoutProfileIsolation()
@@ -86,6 +88,50 @@ struct TestRunner {
             "electron Preferences should be copied"
         )
         try expect(try store.listProfiles().map(\.id) == ["default-copy"], "store should list imported profile")
+    }
+
+    private static func createsAPIKeyProfileWithoutLeakingKeyToConfig() throws {
+        let root = try temporaryDirectory()
+        let store = ProfileStore(root: root)
+
+        let profile = try store.createAPIKeyProfile(
+            id: "zl",
+            name: "ZL",
+            provider: "zl",
+            model: "gpt-5.5",
+            baseURL: "https://api.agpt.uk/v1",
+            apiKey: "sk-test-secret"
+        )
+
+        let config = try String(contentsOf: profile.codexHome.appending(path: "config.toml"), encoding: .utf8)
+        try expect(config.contains("model = \"gpt-5.5\""), "config should include model")
+        try expect(config.contains("model_provider = \"zl\""), "config should include provider")
+        try expect(config.contains("base_url = \"https://api.agpt.uk/v1\""), "config should include base URL")
+        try expect(config.contains("wire_api = \"responses\""), "config should include responses wire API")
+        try expect(!config.contains("sk-test-secret"), "config.toml should not contain the API key")
+
+        let loaded = try store.getProfile(id: "zl")
+        try expect(loaded.apiKeyEnvName?.hasPrefix("CODEXN_API_KEY_ZL_") == true, "profile should store generated env name")
+        try expect(loaded.apiKeyValue == "sk-test-secret", "profile registry should store API key value for v1")
+        try expect(config.contains("env_key = \"\(loaded.apiKeyEnvName!)\""), "config should point to generated env name")
+    }
+
+    private static func rejectsInvalidAPIKeyProviderID() throws {
+        let root = try temporaryDirectory()
+        let store = ProfileStore(root: root)
+
+        do {
+            _ = try store.createAPIKeyProfile(
+                id: "bad",
+                provider: "bad provider",
+                model: "gpt-5.5",
+                baseURL: "https://example.test/v1",
+                apiKey: "secret"
+            )
+            throw TestFailure("createAPIKeyProfile should reject invalid provider ids")
+        } catch {
+            try expect(String(describing: error).contains("Invalid provider id"), "wrong error: \(error)")
+        }
     }
 
     private static func temporaryDirectory() throws -> URL {
