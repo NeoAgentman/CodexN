@@ -104,7 +104,6 @@ $("createForm").addEventListener("submit", async (event) => {
       body: JSON.stringify({
         id: data.id,
         name: data.name || data.id,
-        fromCurrent: data.fromCurrent === "on",
       }),
     });
     selectedId = value.profile.id;

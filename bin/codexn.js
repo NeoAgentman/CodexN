@@ -36,7 +36,7 @@ function usage() {
   return `codexn - macOS Codex profile launcher
 
 Usage:
-  codexn init <id> [--name <name>] [--from-current]
+  codexn init <id> [--name <name>]
   codexn list [--json]
   codexn doctor <id> [--json]
   codexn desktop <id> [--project <path>] [--app <Codex|/path/Codex.app>]
@@ -107,8 +107,7 @@ async function main() {
     case "init": {
       const id = requireId(args.shift());
       const name = takeFlag("--name") ?? id;
-      const fromCurrent = hasFlag("--from-current");
-      const profile = createProfile({ id, name, fromCurrent });
+      const profile = createProfile({ id, name });
       printJson({ status: "created", profile });
       return;
     }

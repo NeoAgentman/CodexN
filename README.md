@@ -2,12 +2,12 @@
 
 CodexN is a macOS-only launcher for running multiple isolated Codex environments on one machine.
 
-Each profile owns:
+Each profile owns isolated paths for:
 
 - `CODEX_HOME`
 - `CODEX_ELECTRON_USER_DATA_PATH`
-- Codex `config.toml`
-- Codex `auth.json`
+- Codex `config.toml` after Codex or an explicit config command creates it
+- Codex `auth.json` after login
 - local sessions, sqlite state, logs, and plugins under that home
 
 This lets `personal`, `work`, `relay`, or other profiles use different Codex accounts and providers without sharing the default `~/.codex` state.
@@ -29,7 +29,7 @@ Profile data is stored in `~/.codex-profiles` by default. Override it with `CODE
 ## Commands
 
 ```bash
-codexn init <id> [--name <name>] [--from-current]
+codexn init <id> [--name <name>]
 codexn list [--json]
 codexn doctor <id> [--json]
 codexn desktop <id> [--project <path>]
@@ -54,6 +54,8 @@ CODEX_ELECTRON_USER_DATA_PATH=<profile>/electron-user-data
 ```
 
 Codex Desktop itself handles multi-window startup. CodexN does not clone or patch the app bundle.
+
+`init` only creates the profile registry entry and empty isolated directories. It does not create `config.toml`, `auth.json`, sessions, or any other Codex-owned configuration. The first `codexn login`, `codexn terminal`, `codexn cli`, or `codexn desktop` run lets Codex initialize that profile's `CODEX_HOME` itself.
 
 ## Provider Setup
 

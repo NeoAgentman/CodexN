@@ -46,7 +46,7 @@ export function getProfile(id, root = defaultRoot()) {
   return normalizeProfile(profile, root);
 }
 
-export function createProfile({ id, name = id, fromCurrent = false }, root = defaultRoot()) {
+export function createProfile({ id, name = id }, root = defaultRoot()) {
   const store = loadStore(root);
   if (store.profiles.some((item) => item.id === id)) {
     throw new Error(`Profile already exists: ${id}`);
@@ -65,7 +65,7 @@ export function createProfile({ id, name = id, fromCurrent = false }, root = def
     },
     root,
   );
-  materializeProfile(profile, { fromCurrent });
+  materializeProfile(profile);
   store.profiles.push(profile);
   saveStore(store, root);
   return profile;
@@ -83,7 +83,7 @@ export function updateProfile(id, patch, root = defaultRoot()) {
     },
     root,
   );
-  materializeProfile(next, { fromCurrent: false });
+  materializeProfile(next);
   store.profiles[index] = next;
   saveStore(store, root);
   return next;
@@ -144,18 +144,10 @@ export function normalizeProfile(profile, root = defaultRoot()) {
   };
 }
 
-export function materializeProfile(profile, { fromCurrent = false } = {}) {
+export function materializeProfile(profile) {
   fs.mkdirSync(profile.codexHome, { recursive: true });
   fs.mkdirSync(profile.electronUserData, { recursive: true });
   fs.mkdirSync(profile.logDir, { recursive: true });
-  const configPath = path.join(profile.codexHome, "config.toml");
-  if (fromCurrent && !fs.existsSync(configPath)) {
-    const current = path.join(os.homedir(), ".codex", "config.toml");
-    if (fs.existsSync(current)) fs.copyFileSync(current, configPath);
-  }
-  if (!fs.existsSync(configPath)) {
-    fs.writeFileSync(configPath, `model_provider = "${profile.defaultProvider}"\n`);
-  }
 }
 
 export function importCurrentCodex(profile) {
@@ -194,11 +186,13 @@ export function doctorProfile(id, root = defaultRoot()) {
       label: "config.toml",
       ok: fs.existsSync(path.join(profile.codexHome, "config.toml")),
       detail: path.join(profile.codexHome, "config.toml"),
+      optional: true,
     },
     {
       label: "auth.json",
       ok: fs.existsSync(path.join(profile.codexHome, "auth.json")),
       detail: path.join(profile.codexHome, "auth.json"),
+      optional: true,
     },
     {
       label: "Codex.app",
@@ -213,7 +207,7 @@ export function doctorProfile(id, root = defaultRoot()) {
         : "none",
     },
   ];
-  return { profile, checks, ok: checks.every((check) => check.ok || check.label === "auth.json") };
+  return { profile, checks, ok: checks.every((check) => check.ok || check.optional) };
 }
 
 function timestamp() {

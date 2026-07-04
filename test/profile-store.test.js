@@ -19,18 +19,15 @@ function tempRoot() {
   return fs.mkdtempSync(path.join(os.tmpdir(), "codexn-test-"));
 }
 
-test("creates isolated profile directories and config", () => {
+test("creates isolated profile directories without codex config", () => {
   const root = tempRoot();
   const profile = createProfile({ id: "work", name: "Work" }, root);
 
   assert.equal(profile.id, "work");
   assert.ok(profile.codexHome.startsWith(root));
   assert.ok(profile.electronUserData.startsWith(root));
-  assert.ok(fs.existsSync(path.join(profile.codexHome, "config.toml")));
-  assert.doesNotMatch(
-    fs.readFileSync(path.join(profile.codexHome, "config.toml"), "utf8"),
-    /\[model_providers\.openai\]/,
-  );
+  assert.equal(fs.existsSync(path.join(profile.codexHome, "config.toml")), false);
+  assert.equal(readConfigSummary(profile).exists, false);
   assert.deepEqual(listProfiles(root).map((item) => item.id), ["work"]);
 });
 
@@ -72,6 +69,7 @@ test("doctor treats missing auth as non-fatal for new profiles", () => {
 
   const report = doctorProfile("personal", root);
   assert.equal(report.ok, true);
+  assert.equal(report.checks.find((check) => check.label === "config.toml").ok, false);
   assert.equal(report.checks.find((check) => check.label === "auth.json").ok, false);
 });
 

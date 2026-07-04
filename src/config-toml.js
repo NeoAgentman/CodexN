@@ -44,7 +44,8 @@ export function readConfigSummary(profile) {
   }
   return {
     path: configPath(profile),
-    modelProvider: rootValue(text, "model_provider") || profile.defaultProvider || "openai",
+    exists: fs.existsSync(configPath(profile)),
+    modelProvider: rootValue(text, "model_provider"),
     model: rootValue(text, "model"),
     providers,
     builtInOverrides: providers.filter((provider) => BUILTIN_PROVIDERS.has(provider)),
@@ -53,6 +54,9 @@ export function readConfigSummary(profile) {
 
 export function repairConfig(profile) {
   let text = readConfig(profile);
+  if (!text.trim()) {
+    return readConfigSummary(profile);
+  }
   for (const provider of BUILTIN_PROVIDERS) {
     text = removeProviderSection(text, provider);
   }

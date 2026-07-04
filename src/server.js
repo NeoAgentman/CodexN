@@ -54,7 +54,6 @@ async function handleApi(request, response, url) {
     const profile = createProfile({
       id: body.id,
       name: body.name || body.id,
-      fromCurrent: Boolean(body.fromCurrent),
     });
     sendJson(response, 201, { profile: profileView(profile) });
     return;
