@@ -6,6 +6,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let store = ProfileStore()
     private let launcher = Launcher()
     private var statusItem: NSStatusItem?
+    private var addProfileWindowController: AddProfileWindowController?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -20,8 +21,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let menu = NSMenu()
         menu.addItem(NSMenuItem(title: "CodexN", action: nil, keyEquivalent: ""))
         menu.addItem(.separator())
-        menu.addItem(menuItem("Import Default...", action: #selector(importDefaultProfile)))
-        menu.addItem(menuItem("New Empty Profile...", action: #selector(newEmptyProfile)))
+        menu.addItem(menuItem("Add Profile...", action: #selector(addProfile)))
         menu.addItem(menuItem("Refresh", action: #selector(refreshMenu)))
         menu.addItem(.separator())
 
@@ -87,24 +87,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         rebuildMenu()
     }
 
-    @objc private func importDefaultProfile() {
-        guard let input = promptForProfile(title: "Import Default Profile", defaultID: "default") else { return }
-        do {
-            _ = try store.importDefaultProfile(id: input.id, name: input.name)
-            rebuildMenu()
-        } catch {
-            showError(error)
+    @objc private func addProfile() {
+        if let controller = addProfileWindowController {
+            controller.showWindow(nil)
+            controller.window?.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            return
         }
-    }
-
-    @objc private func newEmptyProfile() {
-        guard let input = promptForProfile(title: "New Empty Profile", defaultID: "work") else { return }
-        do {
-            _ = try store.createProfile(id: input.id, name: input.name)
-            rebuildMenu()
-        } catch {
-            showError(error)
+        let controller = AddProfileWindowController(store: store) { [weak self] in
+            self?.rebuildMenu()
         }
+        controller.onClose = { [weak self] in
+            self?.addProfileWindowController = nil
+        }
+        addProfileWindowController = controller
+        controller.showWindow(nil)
+        controller.window?.center()
+        NSApp.activate(ignoringOtherApps: true)
     }
 
     @objc private func openOriginDesktop() {
@@ -172,39 +171,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    private func promptForProfile(title: String, defaultID: String) -> (id: String, name: String)? {
-        let idField = NSTextField(string: defaultID)
-        let nameField = NSTextField(string: defaultID)
-        let stack = NSStackView(views: [
-            label("Profile ID"),
-            idField,
-            label("Display Name"),
-            nameField
-        ])
-        stack.orientation = .vertical
-        stack.spacing = 8
-        stack.setFrameSize(NSSize(width: 280, height: 96))
-
-        let alert = NSAlert()
-        alert.messageText = title
-        alert.informativeText = "Profile ID may contain letters, numbers, dot, underscore, or dash."
-        alert.accessoryView = stack
-        alert.addButton(withTitle: "Create")
-        alert.addButton(withTitle: "Cancel")
-        NSApp.activate(ignoringOtherApps: true)
-
-        guard alert.runModal() == .alertFirstButtonReturn else { return nil }
-        let id = idField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
-        let name = nameField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
-        return (id, name.isEmpty ? id : name)
-    }
-
-    private func label(_ text: String) -> NSTextField {
-        let label = NSTextField(labelWithString: text)
-        label.font = .systemFont(ofSize: NSFont.smallSystemFontSize)
-        return label
-    }
-
     private func confirm(title: String, message: String) -> Bool {
         let alert = NSAlert()
         alert.messageText = title
@@ -229,6 +195,205 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.activate(ignoringOtherApps: true)
         alert.runModal()
     }
+}
+
+@MainActor
+final class AddProfileWindowController: NSWindowController, NSWindowDelegate {
+    var onClose: (() -> Void)?
+
+    private let store: ProfileStore
+    private let onComplete: () -> Void
+    private let idField = NSTextField(string: "work")
+    private let nameField = NSTextField(string: "Work")
+    private let modePopup = NSPopUpButton()
+    private let authMode = NSSegmentedControl(labels: ["OAuth login", "Custom API key"], trackingMode: .selectOne, target: nil, action: nil)
+    private let authModeStack = NSStackView()
+    private let apiFieldsStack = NSStackView()
+    private let providerField = NSTextField(string: "")
+    private let modelField = NSTextField(string: "")
+    private let baseURLField = NSTextField(string: "")
+    private let apiKeyField = NSSecureTextField(string: "")
+
+    init(store: ProfileStore, onComplete: @escaping () -> Void) {
+        self.store = store
+        self.onComplete = onComplete
+
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 460, height: 430),
+            styleMask: [.titled, .closable],
+            backing: .buffered,
+            defer: false
+        )
+        window.title = "Add Profile"
+        super.init(window: window)
+        window.delegate = self
+        buildContent(in: window)
+        updateVisibility()
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    func windowWillClose(_ notification: Notification) {
+        onClose?()
+    }
+
+    private func buildContent(in window: NSWindow) {
+        modePopup.addItems(withTitles: ["Import from default", "New profile"])
+        modePopup.target = self
+        modePopup.action = #selector(modeChanged)
+
+        authMode.selectedSegment = 0
+        authMode.target = self
+        authMode.action = #selector(authModeChanged)
+
+        providerField.placeholderString = "zl"
+        modelField.placeholderString = "gpt-5.5"
+        baseURLField.placeholderString = "https://api.example.com/v1"
+        apiKeyField.placeholderString = "API key"
+
+        authModeStack.orientation = .vertical
+        authModeStack.spacing = 6
+        authModeStack.addArrangedSubview(fieldLabel("New profile auth"))
+        authModeStack.addArrangedSubview(authMode)
+
+        apiFieldsStack.orientation = .vertical
+        apiFieldsStack.spacing = 8
+        apiFieldsStack.addArrangedSubview(fieldLabel("Model Provider"))
+        apiFieldsStack.addArrangedSubview(providerField)
+        apiFieldsStack.addArrangedSubview(fieldLabel("Model Name"))
+        apiFieldsStack.addArrangedSubview(modelField)
+        apiFieldsStack.addArrangedSubview(fieldLabel("Base URL"))
+        apiFieldsStack.addArrangedSubview(baseURLField)
+        apiFieldsStack.addArrangedSubview(fieldLabel("API Key"))
+        apiFieldsStack.addArrangedSubview(apiKeyField)
+
+        let createButton = NSButton(title: "Create", target: self, action: #selector(createProfile))
+        createButton.bezelStyle = .rounded
+        createButton.keyEquivalent = "\r"
+
+        let cancelButton = NSButton(title: "Cancel", target: self, action: #selector(cancel))
+        cancelButton.bezelStyle = .rounded
+        cancelButton.keyEquivalent = "\u{1b}"
+
+        let buttonStack = NSStackView(views: [cancelButton, createButton])
+        buttonStack.orientation = .horizontal
+        buttonStack.alignment = .centerY
+        buttonStack.spacing = 8
+
+        let spacer = NSView()
+        let buttonRow = NSStackView(views: [spacer, buttonStack])
+        buttonRow.orientation = .horizontal
+        buttonRow.alignment = .centerY
+
+        let root = NSStackView(views: [
+            fieldLabel("Profile ID"),
+            idField,
+            fieldLabel("Display Name"),
+            nameField,
+            fieldLabel("Mode"),
+            modePopup,
+            authModeStack,
+            apiFieldsStack,
+            buttonRow
+        ])
+        root.orientation = .vertical
+        root.spacing = 8
+        root.translatesAutoresizingMaskIntoConstraints = false
+
+        let content = NSView()
+        content.addSubview(root)
+        window.contentView = content
+
+        NSLayoutConstraint.activate([
+            root.leadingAnchor.constraint(equalTo: content.leadingAnchor, constant: 20),
+            root.trailingAnchor.constraint(equalTo: content.trailingAnchor, constant: -20),
+            root.topAnchor.constraint(equalTo: content.topAnchor, constant: 20),
+            root.bottomAnchor.constraint(lessThanOrEqualTo: content.bottomAnchor, constant: -20),
+            idField.heightAnchor.constraint(equalToConstant: 24),
+            nameField.heightAnchor.constraint(equalToConstant: 24),
+            providerField.heightAnchor.constraint(equalToConstant: 24),
+            modelField.heightAnchor.constraint(equalToConstant: 24),
+            baseURLField.heightAnchor.constraint(equalToConstant: 24),
+            apiKeyField.heightAnchor.constraint(equalToConstant: 24),
+            spacer.widthAnchor.constraint(greaterThanOrEqualToConstant: 1)
+        ])
+    }
+
+    @objc private func modeChanged() {
+        let importMode = modePopup.indexOfSelectedItem == 0
+        if importMode && (idField.stringValue.isEmpty || idField.stringValue == "work") {
+            idField.stringValue = "default"
+            nameField.stringValue = "Default"
+        } else if !importMode && (idField.stringValue.isEmpty || idField.stringValue == "default") {
+            idField.stringValue = "work"
+            nameField.stringValue = "Work"
+        }
+        updateVisibility()
+    }
+
+    @objc private func authModeChanged() {
+        updateVisibility()
+    }
+
+    @objc private func cancel() {
+        close()
+    }
+
+    @objc private func createProfile() {
+        do {
+            let id = trimmed(idField.stringValue)
+            let name = trimmed(nameField.stringValue)
+            let displayName = name.isEmpty ? id : name
+
+            if modePopup.indexOfSelectedItem == 0 {
+                _ = try store.importDefaultProfile(id: id, name: displayName)
+            } else if authMode.selectedSegment == 0 {
+                _ = try store.createProfile(id: id, name: displayName)
+            } else {
+                _ = try store.createAPIKeyProfile(
+                    id: id,
+                    name: displayName,
+                    provider: trimmed(providerField.stringValue),
+                    model: trimmed(modelField.stringValue),
+                    baseURL: trimmed(baseURLField.stringValue),
+                    apiKey: apiKeyField.stringValue
+                )
+            }
+
+            onComplete()
+            close()
+        } catch {
+            showError(error)
+        }
+    }
+
+    private func updateVisibility() {
+        let isNewProfile = modePopup.indexOfSelectedItem == 1
+        let isAPIKey = isNewProfile && authMode.selectedSegment == 1
+        authModeStack.isHidden = !isNewProfile
+        apiFieldsStack.isHidden = !isAPIKey
+    }
+
+    private func fieldLabel(_ text: String) -> NSTextField {
+        let label = NSTextField(labelWithString: text)
+        label.font = .systemFont(ofSize: NSFont.smallSystemFontSize)
+        return label
+    }
+
+    private func showError(_ error: Error) {
+        let alert = NSAlert()
+        alert.messageText = "CodexN Error"
+        alert.informativeText = String(describing: error)
+        alert.alertStyle = .critical
+        alert.addButton(withTitle: "OK")
+        alert.beginSheetModal(for: window!)
+    }
+}
+
+private func trimmed(_ value: String) -> String {
+    value.trimmingCharacters(in: .whitespacesAndNewlines)
 }
 
 let app = NSApplication.shared
