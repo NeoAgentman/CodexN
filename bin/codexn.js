@@ -128,8 +128,7 @@ async function main() {
     case "remove": {
       const id = requireId(args.shift());
       if (!hasFlag("--yes")) throw new Error("Refusing to remove without --yes.");
-      const backupPath = backupProfile(id);
-      printJson({ backupPath, removed: deleteProfile(id) });
+      printJson({ removed: deleteProfile(id) });
       return;
     }
     default:

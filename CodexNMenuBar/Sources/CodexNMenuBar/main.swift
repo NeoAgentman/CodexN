@@ -117,11 +117,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func removeProfile(_ sender: NSMenuItem) {
         guard let id = sender.representedObject as? String else { return }
-        guard confirm(title: "Remove Profile", message: "Remove \(id) from CodexN? Files remain on disk after a backup is created.") else {
+        guard confirm(title: "Remove Profile", message: "Remove \(id) from CodexN? Files remain on disk. No backup is created automatically.") else {
             return
         }
         do {
-            _ = try store.backupProfile(id: id)
             _ = try store.deleteProfile(id: id)
             rebuildMenu()
         } catch {

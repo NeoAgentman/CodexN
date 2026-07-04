@@ -62,4 +62,4 @@ Codex Desktop itself handles multi-window startup. CodexN does not clone or patc
 - Do not run multiple Desktop windows against the same profile at the same time unless you are comfortable with shared SQLite/session writes.
 - `init` refuses to reuse a non-empty profile directory. Pick a new id or clean the old directory first.
 - `import-default` requires a new profile id and copies the current default Codex CLI and Desktop data into that profile.
-- `remove` creates a backup archive before removing the profile from the registry, but it does not delete profile files from disk.
+- `remove` only removes the profile from the registry. It does not create a backup and does not delete profile files from disk. Run `backup` explicitly when you want an archive.
