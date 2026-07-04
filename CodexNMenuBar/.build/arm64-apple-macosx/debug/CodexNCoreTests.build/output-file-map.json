@@ -1,0 +1,12 @@
+{
+  "": {
+    "swift-dependencies": "/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/CodexNCoreTests.build/master.swiftdeps"
+  },
+  "/Users/hittielr/working/codexN/CodexNMenuBar/Tests/CodexNCoreTests/ProfileStoreTests.swift": {
+    "dependencies": "/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/CodexNCoreTests.build/ProfileStoreTests.d",
+    "object": "/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/CodexNCoreTests.build/ProfileStoreTests.swift.o",
+    "swiftmodule": "/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/CodexNCoreTests.build/ProfileStoreTests~partial.swiftmodule",
+    "swift-dependencies": "/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/CodexNCoreTests.build/ProfileStoreTests.swiftdeps",
+    "diagnostics": "/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/CodexNCoreTests.build/ProfileStoreTests.dia"
+  }
+}

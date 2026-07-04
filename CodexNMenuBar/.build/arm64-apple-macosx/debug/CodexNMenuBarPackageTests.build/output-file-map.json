@@ -1,0 +1,12 @@
+{
+  "": {
+    "swift-dependencies": "/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/CodexNMenuBarPackageTests.build/master.swiftdeps"
+  },
+  "/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/CodexNMenuBarPackageTests.derived/runner.swift": {
+    "dependencies": "/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/CodexNMenuBarPackageTests.build/runner.d",
+    "object": "/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/CodexNMenuBarPackageTests.build/runner.swift.o",
+    "swiftmodule": "/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/CodexNMenuBarPackageTests.build/runner~partial.swiftmodule",
+    "swift-dependencies": "/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/CodexNMenuBarPackageTests.build/runner.swiftdeps",
+    "diagnostics": "/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/CodexNMenuBarPackageTests.build/runner.dia"
+  }
+}

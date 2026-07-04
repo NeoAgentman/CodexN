@@ -1,0 +1,12 @@
+{
+  "": {
+    "swift-dependencies": "/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/CodexNMenuBar.build/master.swiftdeps"
+  },
+  "/Users/hittielr/working/codexN/CodexNMenuBar/Sources/CodexNMenuBar/main.swift": {
+    "dependencies": "/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/CodexNMenuBar.build/main.d",
+    "object": "/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/CodexNMenuBar.build/main.swift.o",
+    "swiftmodule": "/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/CodexNMenuBar.build/main~partial.swiftmodule",
+    "swift-dependencies": "/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/CodexNMenuBar.build/main.swiftdeps",
+    "diagnostics": "/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/CodexNMenuBar.build/main.dia"
+  }
+}

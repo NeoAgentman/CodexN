@@ -1,0 +1,159 @@
+client:
+  name: basic
+  file-system: device-agnostic
+tools: {}
+targets:
+  "CodexNCore-arm64-apple-macosx15.0-debug.module": ["<CodexNCore-arm64-apple-macosx15.0-debug.module>"]
+  "CodexNCoreTestRunner-arm64-apple-macosx15.0-debug.exe": ["<CodexNCoreTestRunner-arm64-apple-macosx15.0-debug.exe>"]
+  "CodexNCoreTestRunner-arm64-apple-macosx15.0-debug.module": ["<CodexNCoreTestRunner-arm64-apple-macosx15.0-debug.module>"]
+  "CodexNMenuBar-arm64-apple-macosx15.0-debug.exe": ["<CodexNMenuBar-arm64-apple-macosx15.0-debug.exe>"]
+  "CodexNMenuBar-arm64-apple-macosx15.0-debug.module": ["<CodexNMenuBar-arm64-apple-macosx15.0-debug.module>"]
+  "PackageStructure": ["<PackageStructure>"]
+  "main": ["<CodexNCore-arm64-apple-macosx15.0-debug.module>","<CodexNCoreTestRunner-arm64-apple-macosx15.0-debug.exe>","<CodexNCoreTestRunner-arm64-apple-macosx15.0-debug.module>","<CodexNMenuBar-arm64-apple-macosx15.0-debug.exe>","<CodexNMenuBar-arm64-apple-macosx15.0-debug.module>"]
+  "test": ["<CodexNCore-arm64-apple-macosx15.0-debug.module>","<CodexNCoreTestRunner-arm64-apple-macosx15.0-debug.exe>","<CodexNCoreTestRunner-arm64-apple-macosx15.0-debug.module>","<CodexNMenuBar-arm64-apple-macosx15.0-debug.exe>","<CodexNMenuBar-arm64-apple-macosx15.0-debug.module>"]
+default: "main"
+nodes:
+  "/Users/hittielr/working/codexN/CodexNMenuBar/Sources/CodexNCore/":
+    is-directory-structure: true
+    content-exclusion-patterns: [".git",".build"]
+  "/Users/hittielr/working/codexN/CodexNMenuBar/Sources/CodexNCoreTestRunner/":
+    is-directory-structure: true
+    content-exclusion-patterns: [".git",".build"]
+  "/Users/hittielr/working/codexN/CodexNMenuBar/Sources/CodexNMenuBar/":
+    is-directory-structure: true
+    content-exclusion-patterns: [".git",".build"]
+  "/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/CodexNCoreTestRunner":
+    is-mutated: true
+  "/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/CodexNMenuBar":
+    is-mutated: true
+commands:
+  "/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/CodexNCore.build/sources":
+    tool: write-auxiliary-file
+    inputs: ["<sources-file-list>","/Users/hittielr/working/codexN/CodexNMenuBar/Sources/CodexNCore/ProfileStore.swift"]
+    outputs: ["/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/CodexNCore.build/sources"]
+    description: "Write auxiliary file /Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/CodexNCore.build/sources"
+
+  "/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/CodexNCoreTestRunner-entitlement.plist":
+    tool: write-auxiliary-file
+    inputs: ["<entitlement-plist>","<com.apple.security.get-task-allow>"]
+    outputs: ["/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/CodexNCoreTestRunner-entitlement.plist"]
+    description: "Write auxiliary file /Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/CodexNCoreTestRunner-entitlement.plist"
+
+  "/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/CodexNCoreTestRunner.build/sources":
+    tool: write-auxiliary-file
+    inputs: ["<sources-file-list>","/Users/hittielr/working/codexN/CodexNMenuBar/Sources/CodexNCoreTestRunner/main.swift"]
+    outputs: ["/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/CodexNCoreTestRunner.build/sources"]
+    description: "Write auxiliary file /Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/CodexNCoreTestRunner.build/sources"
+
+  "/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/CodexNCoreTestRunner.product/Objects.LinkFileList":
+    tool: write-auxiliary-file
+    inputs: ["<link-file-list>","/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/CodexNCore.build/ProfileStore.swift.o","/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/CodexNCoreTestRunner.build/main.swift.o"]
+    outputs: ["/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/CodexNCoreTestRunner.product/Objects.LinkFileList"]
+    description: "Write auxiliary file /Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/CodexNCoreTestRunner.product/Objects.LinkFileList"
+
+  "/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/CodexNMenuBar-entitlement.plist":
+    tool: write-auxiliary-file
+    inputs: ["<entitlement-plist>","<com.apple.security.get-task-allow>"]
+    outputs: ["/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/CodexNMenuBar-entitlement.plist"]
+    description: "Write auxiliary file /Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/CodexNMenuBar-entitlement.plist"
+
+  "/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/CodexNMenuBar.build/sources":
+    tool: write-auxiliary-file
+    inputs: ["<sources-file-list>","/Users/hittielr/working/codexN/CodexNMenuBar/Sources/CodexNMenuBar/main.swift"]
+    outputs: ["/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/CodexNMenuBar.build/sources"]
+    description: "Write auxiliary file /Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/CodexNMenuBar.build/sources"
+
+  "/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/CodexNMenuBar.product/Objects.LinkFileList":
+    tool: write-auxiliary-file
+    inputs: ["<link-file-list>","/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/CodexNCore.build/ProfileStore.swift.o","/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/CodexNMenuBar.build/main.swift.o"]
+    outputs: ["/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/CodexNMenuBar.product/Objects.LinkFileList"]
+    description: "Write auxiliary file /Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/CodexNMenuBar.product/Objects.LinkFileList"
+
+  "/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/swift-version--1AB21518FC5DEDBE.txt":
+    tool: write-auxiliary-file
+    inputs: ["<swift-get-version>","/Library/Developer/CommandLineTools/usr/bin/swiftc"]
+    outputs: ["/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/swift-version--1AB21518FC5DEDBE.txt"]
+    always-out-of-date: "true"
+    description: "Write auxiliary file /Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/swift-version--1AB21518FC5DEDBE.txt"
+
+  "<CodexNCore-arm64-apple-macosx15.0-debug.module>":
+    tool: phony
+    inputs: ["/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/CodexNCore.build/ProfileStore.swift.o","/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/Modules/CodexNCore.swiftmodule"]
+    outputs: ["<CodexNCore-arm64-apple-macosx15.0-debug.module>"]
+
+  "<CodexNCoreTestRunner-arm64-apple-macosx15.0-debug.exe>":
+    tool: phony
+    inputs: ["<CodexNCoreTestRunner-arm64-apple-macosx15.0-debug.exe-CodeSigning>"]
+    outputs: ["<CodexNCoreTestRunner-arm64-apple-macosx15.0-debug.exe>"]
+
+  "<CodexNCoreTestRunner-arm64-apple-macosx15.0-debug.module>":
+    tool: phony
+    inputs: ["/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/CodexNCoreTestRunner.build/main.swift.o","/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/Modules/CodexNCoreTestRunner.swiftmodule"]
+    outputs: ["<CodexNCoreTestRunner-arm64-apple-macosx15.0-debug.module>"]
+
+  "<CodexNMenuBar-arm64-apple-macosx15.0-debug.exe>":
+    tool: phony
+    inputs: ["<CodexNMenuBar-arm64-apple-macosx15.0-debug.exe-CodeSigning>"]
+    outputs: ["<CodexNMenuBar-arm64-apple-macosx15.0-debug.exe>"]
+
+  "<CodexNMenuBar-arm64-apple-macosx15.0-debug.module>":
+    tool: phony
+    inputs: ["/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/CodexNMenuBar.build/main.swift.o","/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/Modules/CodexNMenuBar.swiftmodule"]
+    outputs: ["<CodexNMenuBar-arm64-apple-macosx15.0-debug.module>"]
+
+  "C.CodexNCore-arm64-apple-macosx15.0-debug.module":
+    tool: shell
+    inputs: ["/Users/hittielr/working/codexN/CodexNMenuBar/Sources/CodexNCore/ProfileStore.swift","/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/swift-version--1AB21518FC5DEDBE.txt","/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/CodexNCore.build/sources"]
+    outputs: ["/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/CodexNCore.build/ProfileStore.swift.o","/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/Modules/CodexNCore.swiftmodule"]
+    description: "Compiling Swift Module 'CodexNCore' (1 sources)"
+    args: ["/Library/Developer/CommandLineTools/usr/bin/swiftc","-module-name","CodexNCore","-emit-dependencies","-emit-module","-emit-module-path","/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/Modules/CodexNCore.swiftmodule","-output-file-map","/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/CodexNCore.build/output-file-map.json","-parse-as-library","-incremental","-c","@/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/CodexNCore.build/sources","-I","/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/Modules","-target","arm64-apple-macosx14.0","-incremental","-enable-batch-mode","-serialize-diagnostics","-index-store-path","/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/index/store","-Onone","-enable-testing","-j8","-DSWIFT_PACKAGE","-DDEBUG","-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE","-module-cache-path","/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/ModuleCache","-parseable-output","-parse-as-library","-emit-objc-header","-emit-objc-header-path","/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/CodexNCore.build/include/CodexNCore-Swift.h","-swift-version","6","-I","/Library/Developer/CommandLineTools/Library/Developer/Frameworks","-L","/Library/Developer/CommandLineTools/Library/Developer/Frameworks","-plugin-path","/Library/Developer/CommandLineTools/usr/lib/swift/host/plugins/testing","-sdk","/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk","-g","-Xcc","-isysroot","-Xcc","/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk","-Xcc","-fPIC","-Xcc","-g","-package-name","codexnmenubar"]
+
+  "C.CodexNCoreTestRunner-arm64-apple-macosx15.0-debug.exe":
+    tool: shell
+    inputs: ["/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/CodexNCore.build/ProfileStore.swift.o","/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/CodexNCoreTestRunner.build/main.swift.o","/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/CodexNCoreTestRunner.product/Objects.LinkFileList"]
+    outputs: ["/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/CodexNCoreTestRunner"]
+    description: "Linking ./.build/arm64-apple-macosx/debug/CodexNCoreTestRunner"
+    args: ["/Library/Developer/CommandLineTools/usr/bin/swiftc","-L","/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug","-o","/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/CodexNCoreTestRunner","-module-name","CodexNCoreTestRunner","-Xlinker","-no_warn_duplicate_libraries","-emit-executable","-Xlinker","-alias","-Xlinker","_CodexNCoreTestRunner_main","-Xlinker","_main","-Xlinker","-rpath","-Xlinker","@loader_path","@/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/CodexNCoreTestRunner.product/Objects.LinkFileList","-Xlinker","-rpath","-Xlinker","/Library/Developer/CommandLineTools/usr/lib/swift-6.2/macosx","-target","arm64-apple-macosx14.0","-Xlinker","-add_ast_path","-Xlinker","/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/Modules/CodexNCore.swiftmodule","-Xlinker","-add_ast_path","-Xlinker","/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/Modules/CodexNCoreTestRunner.swiftmodule","-I","/Library/Developer/CommandLineTools/Library/Developer/Frameworks","-L","/Library/Developer/CommandLineTools/Library/Developer/Frameworks","-plugin-path","/Library/Developer/CommandLineTools/usr/lib/swift/host/plugins/testing","-sdk","/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk","-g"]
+
+  "C.CodexNCoreTestRunner-arm64-apple-macosx15.0-debug.exe-entitlements":
+    tool: shell
+    inputs: ["/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/CodexNCoreTestRunner","/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/CodexNCoreTestRunner-entitlement.plist"]
+    outputs: ["<CodexNCoreTestRunner-arm64-apple-macosx15.0-debug.exe-CodeSigning>"]
+    description: "Applying debug entitlements to ./.build/arm64-apple-macosx/debug/CodexNCoreTestRunner"
+    args: ["codesign","--force","--sign","-","--entitlements","/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/CodexNCoreTestRunner-entitlement.plist","/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/CodexNCoreTestRunner"]
+
+  "C.CodexNCoreTestRunner-arm64-apple-macosx15.0-debug.module":
+    tool: shell
+    inputs: ["/Users/hittielr/working/codexN/CodexNMenuBar/Sources/CodexNCoreTestRunner/main.swift","/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/swift-version--1AB21518FC5DEDBE.txt","/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/Modules/CodexNCore.swiftmodule","/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/CodexNCoreTestRunner.build/sources"]
+    outputs: ["/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/CodexNCoreTestRunner.build/main.swift.o","/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/Modules/CodexNCoreTestRunner.swiftmodule"]
+    description: "Compiling Swift Module 'CodexNCoreTestRunner' (1 sources)"
+    args: ["/Library/Developer/CommandLineTools/usr/bin/swiftc","-module-name","CodexNCoreTestRunner","-emit-dependencies","-emit-module","-emit-module-path","/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/Modules/CodexNCoreTestRunner.swiftmodule","-output-file-map","/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/CodexNCoreTestRunner.build/output-file-map.json","-incremental","-c","@/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/CodexNCoreTestRunner.build/sources","-I","/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/Modules","-target","arm64-apple-macosx14.0","-incremental","-enable-batch-mode","-serialize-diagnostics","-index-store-path","/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/index/store","-Onone","-enable-testing","-j8","-DSWIFT_PACKAGE","-DDEBUG","-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE","-module-cache-path","/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/ModuleCache","-parseable-output","-Xfrontend","-entry-point-function-name","-Xfrontend","CodexNCoreTestRunner_main","-parse-as-library","-swift-version","6","-I","/Library/Developer/CommandLineTools/Library/Developer/Frameworks","-L","/Library/Developer/CommandLineTools/Library/Developer/Frameworks","-plugin-path","/Library/Developer/CommandLineTools/usr/lib/swift/host/plugins/testing","-sdk","/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk","-g","-Xcc","-isysroot","-Xcc","/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk","-Xcc","-fPIC","-Xcc","-g","-package-name","codexnmenubar"]
+
+  "C.CodexNMenuBar-arm64-apple-macosx15.0-debug.exe":
+    tool: shell
+    inputs: ["/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/CodexNCore.build/ProfileStore.swift.o","/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/CodexNMenuBar.build/main.swift.o","/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/CodexNMenuBar.product/Objects.LinkFileList"]
+    outputs: ["/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/CodexNMenuBar"]
+    description: "Linking ./.build/arm64-apple-macosx/debug/CodexNMenuBar"
+    args: ["/Library/Developer/CommandLineTools/usr/bin/swiftc","-L","/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug","-o","/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/CodexNMenuBar","-module-name","CodexNMenuBar","-Xlinker","-no_warn_duplicate_libraries","-emit-executable","-Xlinker","-alias","-Xlinker","_CodexNMenuBar_main","-Xlinker","_main","-Xlinker","-rpath","-Xlinker","@loader_path","@/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/CodexNMenuBar.product/Objects.LinkFileList","-Xlinker","-rpath","-Xlinker","/Library/Developer/CommandLineTools/usr/lib/swift-6.2/macosx","-target","arm64-apple-macosx14.0","-Xlinker","-add_ast_path","-Xlinker","/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/Modules/CodexNCore.swiftmodule","-Xlinker","-add_ast_path","-Xlinker","/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/Modules/CodexNMenuBar.swiftmodule","-I","/Library/Developer/CommandLineTools/Library/Developer/Frameworks","-L","/Library/Developer/CommandLineTools/Library/Developer/Frameworks","-plugin-path","/Library/Developer/CommandLineTools/usr/lib/swift/host/plugins/testing","-sdk","/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk","-g"]
+
+  "C.CodexNMenuBar-arm64-apple-macosx15.0-debug.exe-entitlements":
+    tool: shell
+    inputs: ["/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/CodexNMenuBar","/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/CodexNMenuBar-entitlement.plist"]
+    outputs: ["<CodexNMenuBar-arm64-apple-macosx15.0-debug.exe-CodeSigning>"]
+    description: "Applying debug entitlements to ./.build/arm64-apple-macosx/debug/CodexNMenuBar"
+    args: ["codesign","--force","--sign","-","--entitlements","/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/CodexNMenuBar-entitlement.plist","/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/CodexNMenuBar"]
+
+  "C.CodexNMenuBar-arm64-apple-macosx15.0-debug.module":
+    tool: shell
+    inputs: ["/Users/hittielr/working/codexN/CodexNMenuBar/Sources/CodexNMenuBar/main.swift","/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/swift-version--1AB21518FC5DEDBE.txt","/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/Modules/CodexNCore.swiftmodule","/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/CodexNMenuBar.build/sources"]
+    outputs: ["/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/CodexNMenuBar.build/main.swift.o","/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/Modules/CodexNMenuBar.swiftmodule"]
+    description: "Compiling Swift Module 'CodexNMenuBar' (1 sources)"
+    args: ["/Library/Developer/CommandLineTools/usr/bin/swiftc","-module-name","CodexNMenuBar","-emit-dependencies","-emit-module","-emit-module-path","/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/Modules/CodexNMenuBar.swiftmodule","-output-file-map","/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/CodexNMenuBar.build/output-file-map.json","-incremental","-c","@/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/CodexNMenuBar.build/sources","-I","/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/Modules","-target","arm64-apple-macosx14.0","-incremental","-enable-batch-mode","-serialize-diagnostics","-index-store-path","/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/index/store","-Onone","-enable-testing","-j8","-DSWIFT_PACKAGE","-DDEBUG","-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE","-module-cache-path","/Users/hittielr/working/codexN/CodexNMenuBar/.build/arm64-apple-macosx/debug/ModuleCache","-parseable-output","-Xfrontend","-entry-point-function-name","-Xfrontend","CodexNMenuBar_main","-swift-version","6","-I","/Library/Developer/CommandLineTools/Library/Developer/Frameworks","-L","/Library/Developer/CommandLineTools/Library/Developer/Frameworks","-plugin-path","/Library/Developer/CommandLineTools/usr/lib/swift/host/plugins/testing","-sdk","/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk","-g","-Xcc","-isysroot","-Xcc","/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk","-Xcc","-fPIC","-Xcc","-g","-package-name","codexnmenubar"]
+
+  "PackageStructure":
+    tool: package-structure-tool
+    inputs: ["/Users/hittielr/working/codexN/CodexNMenuBar/Sources/CodexNCore/","/Users/hittielr/working/codexN/CodexNMenuBar/Sources/CodexNCoreTestRunner/","/Users/hittielr/working/codexN/CodexNMenuBar/Sources/CodexNMenuBar/","/Users/hittielr/working/codexN/CodexNMenuBar/Package.swift","/Users/hittielr/working/codexN/CodexNMenuBar/Package.resolved"]
+    outputs: ["<PackageStructure>"]
+    description: "Planning build"
+    allow-missing-inputs: true
+
