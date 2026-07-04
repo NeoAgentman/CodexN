@@ -13,6 +13,7 @@ struct TestRunner {
         try injectsAPIKeyEnvironmentIntoLaunchCommands()
         try readsLegacyProfileRegistry()
         try buildsDefaultLaunchCommandsWithoutProfileIsolation()
+        try stripsCodexEnvironmentWhenLaunchingDefaultApp()
         print("CodexNCoreTestRunner: all tests passed")
     }
 
@@ -219,6 +220,27 @@ struct TestRunner {
         try expect(desktopArguments == ["-n", "/Applications/Codex.app"], "default desktop should not include profile env")
         try expect(!desktopArguments.contains(where: { $0.contains("CODEX_HOME") }), "default desktop should not include CODEX_HOME")
         try expect(!desktopArguments.contains(where: { $0.contains("user-data-dir") }), "default desktop should not include user-data-dir")
+    }
+
+    private static func stripsCodexEnvironmentWhenLaunchingDefaultApp() throws {
+        let launcher = Launcher()
+        let environment = launcher.defaultDesktopLaunchEnvironment(environment: [
+            "HOME": "/Users/example",
+            "PATH": "/usr/bin:/bin",
+            "CODEX_HOME": "/tmp/profile/codex-home",
+            "CODEX_ELECTRON_USER_DATA_PATH": "/tmp/profile/electron-user-data",
+            "CODEX_INTERNAL_ORIGINATOR_OVERRIDE": "Codex Desktop",
+            "CODEXN_API_KEY_ZL_ABC": "secret",
+            "CODEXN_ROOT": "/tmp/profiles"
+        ])
+
+        try expect(environment["HOME"] == "/Users/example", "default launch should preserve unrelated environment")
+        try expect(environment["PATH"] == "/usr/bin:/bin", "default launch should preserve PATH")
+        try expect(environment["CODEX_HOME"] == nil, "default launch should remove CODEX_HOME")
+        try expect(environment["CODEX_ELECTRON_USER_DATA_PATH"] == nil, "default launch should remove electron user data")
+        try expect(environment["CODEX_INTERNAL_ORIGINATOR_OVERRIDE"] == nil, "default launch should remove Codex internal env")
+        try expect(environment["CODEXN_API_KEY_ZL_ABC"] == nil, "default launch should remove CodexN API key env")
+        try expect(environment["CODEXN_ROOT"] == nil, "default launch should remove CodexN root env")
     }
 
     private static func expect(_ condition: @autoclosure () throws -> Bool, _ message: String) throws {

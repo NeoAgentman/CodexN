@@ -43,18 +43,31 @@ public struct Launcher {
         return arguments
     }
 
+    public func defaultDesktopLaunchEnvironment(
+        environment: [String: String] = ProcessInfo.processInfo.environment
+    ) -> [String: String] {
+        environment.filter { key, _ in
+            !key.hasPrefix("CODEX_") && !key.hasPrefix("CODEXN_")
+        }
+    }
+
     public func openDesktop(profile: Profile) throws {
         try run("/usr/bin/open", arguments: desktopOpenArguments(profile: profile))
     }
 
     public func openDefaultDesktop() throws {
-        try run("/usr/bin/open", arguments: defaultDesktopOpenArguments())
+        try run(
+            "/usr/bin/open",
+            arguments: defaultDesktopOpenArguments(),
+            environment: defaultDesktopLaunchEnvironment()
+        )
     }
 
-    private func run(_ executable: String, arguments: [String]) throws {
+    private func run(_ executable: String, arguments: [String], environment: [String: String]? = nil) throws {
         let process = Process()
         process.executableURL = URL(filePath: executable)
         process.arguments = arguments
+        process.environment = environment
         try process.run()
         process.waitUntilExit()
         if process.terminationStatus != 0 {

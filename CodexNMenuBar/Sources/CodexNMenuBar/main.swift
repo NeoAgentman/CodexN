@@ -56,10 +56,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(headerItem)
         menu.addItem(.separator())
 
-        let origin = NSMenuItem(title: "origin", action: nil, keyEquivalent: "")
-        origin.image = NSImage(systemSymbolName: "house", accessibilityDescription: "origin")
-        origin.submenu = originMenu()
-        menu.addItem(origin)
+        let defaultCodex = NSMenuItem(title: "Default Codex", action: nil, keyEquivalent: "")
+        defaultCodex.image = NSImage(systemSymbolName: "house", accessibilityDescription: "Default Codex")
+        defaultCodex.submenu = defaultCodexMenu()
+        menu.addItem(defaultCodex)
 
         if let loadError {
             let errorItem = NSMenuItem(title: "Failed to load profiles", action: nil, keyEquivalent: "")
@@ -85,9 +85,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(menuItem("Quit", symbol: "xmark.rectangle", action: #selector(quitFromMenu)))
     }
 
-    private func originMenu() -> NSMenu {
+    private func defaultCodexMenu() -> NSMenu {
         let menu = NSMenu()
-        menu.addItem(menuItem("Open Codex App", symbol: "macwindow", action: #selector(openOriginDesktop)))
+        menu.addItem(menuItem("Open Codex App", symbol: "macwindow", action: #selector(openDefaultCodexApp)))
         return menu
     }
 
@@ -171,7 +171,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         quit()
     }
 
-    @objc private func openOriginDesktop() {
+    @objc private func openDefaultCodexApp() {
         runMenuAction { try launcher.openDefaultDesktop() }
     }
 

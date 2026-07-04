@@ -6,7 +6,7 @@ It provides:
 
 - a Swift menu bar app for opening isolated Codex app profiles
 - isolated `CODEX_HOME` and Electron user-data directories per profile
-- an `origin` entry for launching the normal system Codex environment
+- a `Default Codex` entry for launching the normal system Codex environment
 - Settings for adding profiles and controlling app startup behavior
 
 This is useful when you want separate Codex accounts, providers, auth state, sessions, plugins, and Desktop user data on the same Mac.
@@ -54,7 +54,7 @@ ditto CodexNMenuBar/CodexN.app /Applications/CodexN.app
 
 The menu bar app supports:
 
-- opening the system default Codex via `origin`
+- opening the system default Codex via `Default Codex`
 - creating empty login profiles
 - importing the current default Codex profile
 - creating custom API-key profiles
