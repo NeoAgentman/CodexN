@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 APP="$ROOT/CodexN.app"
 EXECUTABLE="$ROOT/.build/release/CodexNMenuBar"
+ICON="$ROOT/Assets/CodexN.icns"
 
 cd "$ROOT"
 swift build -c release --product CodexNMenuBar
@@ -11,6 +12,7 @@ swift build -c release --product CodexNMenuBar
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$EXECUTABLE" "$APP/Contents/MacOS/CodexN"
+cp "$ICON" "$APP/Contents/Resources/CodexN.icns"
 
 cat > "$APP/Contents/Info.plist" <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>
@@ -26,6 +28,8 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
   <string>local.codexn.menubar</string>
   <key>CFBundleInfoDictionaryVersion</key>
   <string>6.0</string>
+  <key>CFBundleIconFile</key>
+  <string>CodexN</string>
   <key>CFBundleName</key>
   <string>CodexN</string>
   <key>CFBundleDisplayName</key>
