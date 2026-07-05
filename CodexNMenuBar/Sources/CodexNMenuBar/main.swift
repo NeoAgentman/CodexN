@@ -15,10 +15,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var usageRefreshTask: Task<Error?, Never>?
     private var focusedProfileTimer: Timer?
     private var workspaceActivationObserver: NSObjectProtocol?
+    private var workspaceTerminationObserver: NSObjectProtocol?
     private var focusedProfileLabel: FocusedCodexProfileLabel = .none
 
     private static let usageRefreshInterval: TimeInterval = 30 * 60
-    private static let focusedProfileRefreshInterval: TimeInterval = 2
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -40,12 +40,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         usageRefreshTimer?.invalidate()
         usageRefreshTask?.cancel()
         focusedProfileTimer?.invalidate()
-        if let workspaceActivationObserver {
-            NSWorkspace.shared.notificationCenter.removeObserver(workspaceActivationObserver)
-        }
+        stopFocusedProfileTitleObservers()
     }
 
     func menuWillOpen(_ menu: NSMenu) {
+        updateFocusedProfileTitle()
         rebuildMenu()
     }
 
@@ -195,15 +194,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private func startFocusedProfileTitleUpdates() {
         updateFocusedProfileTitle()
         focusedProfileTimer?.invalidate()
-        focusedProfileTimer = Timer.scheduledTimer(withTimeInterval: Self.focusedProfileRefreshInterval, repeats: true) { [weak self] _ in
+        focusedProfileTimer = Timer.scheduledTimer(withTimeInterval: FocusedCodexProfileResolver.fallbackRefreshInterval, repeats: true) { [weak self] _ in
             Task { @MainActor [weak self] in
                 self?.updateFocusedProfileTitle()
             }
         }
 
-        if let workspaceActivationObserver {
-            NSWorkspace.shared.notificationCenter.removeObserver(workspaceActivationObserver)
-        }
+        stopFocusedProfileTitleObservers()
         workspaceActivationObserver = NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.didActivateApplicationNotification,
             object: nil,
@@ -212,6 +209,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             Task { @MainActor [weak self] in
                 self?.updateFocusedProfileTitle()
             }
+        }
+        workspaceTerminationObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didTerminateApplicationNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.updateFocusedProfileTitle()
+            }
+        }
+    }
+
+    private func stopFocusedProfileTitleObservers() {
+        if let workspaceActivationObserver {
+            NSWorkspace.shared.notificationCenter.removeObserver(workspaceActivationObserver)
+            self.workspaceActivationObserver = nil
+        }
+        if let workspaceTerminationObserver {
+            NSWorkspace.shared.notificationCenter.removeObserver(workspaceTerminationObserver)
+            self.workspaceTerminationObserver = nil
         }
     }
 
@@ -251,7 +268,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     private func focusedCodexProcessSnapshot() -> FocusedCodexProcessSnapshot? {
         guard let application = NSWorkspace.shared.frontmostApplication else { return nil }
-        let processInfo = FocusedCodexProcessArgumentsReader.read(pid: application.processIdentifier)
+        let shouldReadProcessArguments = FocusedCodexProfileResolver.shouldReadProcessArguments(
+            bundleIdentifier: application.bundleIdentifier,
+            localizedName: application.localizedName,
+            executablePath: application.executableURL?.path
+        )
+        let processInfo = shouldReadProcessArguments
+            ? FocusedCodexProcessArgumentsReader.read(pid: application.processIdentifier)
+            : (arguments: [], environment: [:])
         return FocusedCodexProcessSnapshot(
             pid: application.processIdentifier,
             bundleIdentifier: application.bundleIdentifier,
