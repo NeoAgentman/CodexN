@@ -221,7 +221,32 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let label = FocusedCodexProfileResolver.resolve(snapshot: snapshot, profiles: profiles)
         guard label != focusedProfileLabel else { return }
         focusedProfileLabel = label
-        statusItem?.button?.title = FocusedCodexProfileResolver.menuBarTitle(for: label)
+        applyStatusTitle(for: label)
+    }
+
+    private func applyStatusTitle(for label: FocusedCodexProfileLabel) {
+        let title = FocusedCodexProfileResolver.menuBarTitle(for: label)
+        guard let highlightedSegment = FocusedCodexProfileResolver.menuBarHighlightedSegment(for: label),
+              let range = title.range(of: highlightedSegment, options: .backwards) else {
+            statusItem?.button?.attributedTitle = NSAttributedString(string: title)
+            return
+        }
+
+        let attributedTitle = NSMutableAttributedString(
+            string: title,
+            attributes: [
+                .font: NSFont.menuBarFont(ofSize: 0),
+                .foregroundColor: NSColor.labelColor
+            ]
+        )
+        attributedTitle.addAttributes(
+            [
+                .font: NSFont.systemFont(ofSize: NSFont.systemFontSize, weight: .semibold),
+                .foregroundColor: NSColor.controlAccentColor
+            ],
+            range: NSRange(range, in: title)
+        )
+        statusItem?.button?.attributedTitle = attributedTitle
     }
 
     private func focusedCodexProcessSnapshot() -> FocusedCodexProcessSnapshot? {
