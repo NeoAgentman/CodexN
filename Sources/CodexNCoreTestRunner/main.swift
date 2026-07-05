@@ -25,6 +25,7 @@ struct TestRunner {
         try resolvesDefaultCodexForCodexAppWithoutProfileMatch()
         try ignoresNonCodexForegroundApps()
         try formatsFocusedProfileMenuTitles()
+        try formatsFocusedProfileMenuBarText()
         try identifiesFocusedProfileTitleHighlightSegment()
         try skipsProcessArgumentReadsForNonCodexApps()
         try usesTenSecondFocusedProfileFallbackInterval()
@@ -420,6 +421,12 @@ struct TestRunner {
         try expect(FocusedCodexProfileResolver.menuBarTitle(for: .none) == "CodexN", "none title should be plain")
         try expect(FocusedCodexProfileResolver.menuBarTitle(for: .defaultCodex) == "CodexN | Default", "default title should be labeled")
         try expect(FocusedCodexProfileResolver.menuBarTitle(for: .profile(id: "work")) == "CodexN | work", "profile title should include id")
+    }
+
+    private static func formatsFocusedProfileMenuBarText() throws {
+        try expect(FocusedCodexProfileResolver.menuBarProfileText(for: .none) == "", "plain menu bar text should be empty")
+        try expect(FocusedCodexProfileResolver.menuBarProfileText(for: .defaultCodex) == "Default", "default menu bar text should show Default")
+        try expect(FocusedCodexProfileResolver.menuBarProfileText(for: .profile(id: "work")) == "work", "profile menu bar text should show id")
     }
 
     private static func identifiesFocusedProfileTitleHighlightSegment() throws {

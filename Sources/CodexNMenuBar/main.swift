@@ -23,8 +23,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        item.button?.title = "CodexN"
-        item.button?.toolTip = "Codex profile launcher"
+        if let button = item.button {
+            configureStatusButton(button)
+        }
         statusItem = item
 
         let menu = NSMenu()
@@ -242,7 +243,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     private func applyStatusTitle(for label: FocusedCodexProfileLabel) {
-        let title = FocusedCodexProfileResolver.menuBarTitle(for: label)
+        let title = FocusedCodexProfileResolver.menuBarProfileText(for: label)
         guard let highlightedSegment = FocusedCodexProfileResolver.menuBarHighlightedSegment(for: label),
               let range = title.range(of: highlightedSegment, options: .backwards) else {
             statusItem?.button?.attributedTitle = NSAttributedString(string: title)
@@ -264,6 +265,36 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             range: NSRange(range, in: title)
         )
         statusItem?.button?.attributedTitle = attributedTitle
+    }
+
+    private func configureStatusButton(_ button: NSStatusBarButton) {
+        button.image = Self.menuBarIcon()
+        button.imagePosition = .imageLeft
+        button.imageScaling = .scaleProportionallyDown
+        button.attributedTitle = NSAttributedString(string: "")
+        button.toolTip = "Codex profile launcher"
+    }
+
+    private static func menuBarIcon() -> NSImage {
+        let image = NSImage(size: NSSize(width: 18, height: 18), flipped: false) { _ in
+            NSColor.black.setStroke()
+            let mark = NSBezierPath()
+            mark.lineWidth = 2.2
+            mark.lineCapStyle = .round
+            mark.lineJoinStyle = .round
+            mark.move(to: NSPoint(x: 4.4, y: 4.1))
+            mark.line(to: NSPoint(x: 4.4, y: 13.9))
+            mark.line(to: NSPoint(x: 13.6, y: 4.1))
+            mark.line(to: NSPoint(x: 13.6, y: 13.9))
+            mark.stroke()
+
+            NSColor.black.setFill()
+            NSBezierPath(ovalIn: NSRect(x: 2.3, y: 2.0, width: 2.8, height: 2.8)).fill()
+            NSBezierPath(ovalIn: NSRect(x: 12.9, y: 13.2, width: 2.8, height: 2.8)).fill()
+            return true
+        }
+        image.isTemplate = true
+        return image
     }
 
     private func focusedCodexProcessSnapshot() -> FocusedCodexProcessSnapshot? {

@@ -86,6 +86,17 @@ public enum FocusedCodexProfileResolver {
         }
     }
 
+    public static func menuBarProfileText(for label: FocusedCodexProfileLabel) -> String {
+        switch label {
+        case .none:
+            ""
+        case .defaultCodex:
+            "Default"
+        case .profile(let id):
+            id
+        }
+    }
+
     public static func menuBarHighlightedSegment(for label: FocusedCodexProfileLabel) -> String? {
         switch label {
         case .none:
