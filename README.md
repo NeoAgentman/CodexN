@@ -26,12 +26,15 @@ Each profile gets its own directory under `~/.codex-profiles` by default:
 When launching a profile, CodexN sets:
 
 ```text
+CODEXN_PROFILE_ID=<profile-id>
 CODEX_HOME=<profile>/codex-home
 CODEX_ELECTRON_USER_DATA_PATH=<profile>/electron-user-data
 --user-data-dir=<profile>/electron-user-data
+--codexn-profile-id=<profile-id>
 ```
 
 Codex itself initializes `config.toml`, auth files, sessions, plugins, and other Codex-owned data when you first open that profile.
+CodexN uses the explicit profile id to update its menu bar title when a Codex window is focused, so the title changes from `CodexN` to `CodexN | <profile-id>` for managed profiles and `CodexN | Default` for the system default Codex app.
 
 ## Menu Bar App
 
@@ -59,6 +62,7 @@ The menu bar app supports:
 
 - opening the system default Codex by clicking the first-level `Default Codex` menu item
 - opening a profile's Codex app by clicking that profile directly in the first-level menu
+- showing the currently focused Codex environment in the menu bar title, with the active profile id highlighted
 - viewing today's token usage as a cached menu bar chart, refreshed in the background at launch and every 30 minutes
 - creating empty OAuth-login profiles from `Settings...` -> `Profiles` -> `Add Profile`
 - importing the current default Codex profile from `Settings...` -> `Profiles` -> `Add Profile`

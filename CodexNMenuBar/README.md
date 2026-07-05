@@ -42,5 +42,6 @@ Use `Settings...` from the menu bar app to manage profiles:
 The menu also includes a first-level `Default Codex` item. It opens the default Codex app without inheriting CodexN profile environment variables or setting a Chromium `--user-data-dir`.
 
 Each managed profile also appears as a first-level menu item. Clicking a profile opens the Codex app for that profile directly.
+Managed launches inject `CODEXN_PROFILE_ID` and `--codexn-profile-id=<profile-id>` so CodexN can identify focused Codex windows directly. When a Codex window is focused, the menu bar title changes to `CodexN | <profile-id>` for managed profiles or `CodexN | Default` for the system default app; the active profile segment is highlighted.
 
 The token-usage chart reads `usage-cache.json` from the profile root. CodexN refreshes that cache in the background at launch and every 30 minutes; the menu itself only reads the cache.

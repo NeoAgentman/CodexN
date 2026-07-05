@@ -13,8 +13,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var settingsWindowController: SettingsWindowController?
     private var usageRefreshTimer: Timer?
     private var usageRefreshTask: Task<Error?, Never>?
+    private var focusedProfileTimer: Timer?
+    private var workspaceActivationObserver: NSObjectProtocol?
+    private var focusedProfileLabel: FocusedCodexProfileLabel = .none
 
     private static let usageRefreshInterval: TimeInterval = 30 * 60
+    private static let focusedProfileRefreshInterval: TimeInterval = 2
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -29,11 +33,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         statusItem?.menu = menu
         rebuildMenu()
         startUsageRefreshLoop()
+        startFocusedProfileTitleUpdates()
     }
 
     func applicationWillTerminate(_ notification: Notification) {
         usageRefreshTimer?.invalidate()
         usageRefreshTask?.cancel()
+        focusedProfileTimer?.invalidate()
+        if let workspaceActivationObserver {
+            NSWorkspace.shared.notificationCenter.removeObserver(workspaceActivationObserver)
+        }
     }
 
     func menuWillOpen(_ menu: NSMenu) {
@@ -181,6 +190,76 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 self?.refreshUsageCacheInBackground()
             }
         }
+    }
+
+    private func startFocusedProfileTitleUpdates() {
+        updateFocusedProfileTitle()
+        focusedProfileTimer?.invalidate()
+        focusedProfileTimer = Timer.scheduledTimer(withTimeInterval: Self.focusedProfileRefreshInterval, repeats: true) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.updateFocusedProfileTitle()
+            }
+        }
+
+        if let workspaceActivationObserver {
+            NSWorkspace.shared.notificationCenter.removeObserver(workspaceActivationObserver)
+        }
+        workspaceActivationObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didActivateApplicationNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.updateFocusedProfileTitle()
+            }
+        }
+    }
+
+    private func updateFocusedProfileTitle() {
+        let snapshot = focusedCodexProcessSnapshot()
+        let profiles = (try? store.listProfiles()) ?? []
+        let label = FocusedCodexProfileResolver.resolve(snapshot: snapshot, profiles: profiles)
+        guard label != focusedProfileLabel else { return }
+        focusedProfileLabel = label
+        applyStatusTitle(for: label)
+    }
+
+    private func applyStatusTitle(for label: FocusedCodexProfileLabel) {
+        let title = FocusedCodexProfileResolver.menuBarTitle(for: label)
+        guard let highlightedSegment = FocusedCodexProfileResolver.menuBarHighlightedSegment(for: label),
+              let range = title.range(of: highlightedSegment, options: .backwards) else {
+            statusItem?.button?.attributedTitle = NSAttributedString(string: title)
+            return
+        }
+
+        let attributedTitle = NSMutableAttributedString(
+            string: title,
+            attributes: [
+                .font: NSFont.menuBarFont(ofSize: 0),
+                .foregroundColor: NSColor.labelColor
+            ]
+        )
+        attributedTitle.addAttributes(
+            [
+                .font: NSFont.systemFont(ofSize: NSFont.systemFontSize, weight: .semibold),
+                .foregroundColor: NSColor.controlAccentColor
+            ],
+            range: NSRange(range, in: title)
+        )
+        statusItem?.button?.attributedTitle = attributedTitle
+    }
+
+    private func focusedCodexProcessSnapshot() -> FocusedCodexProcessSnapshot? {
+        guard let application = NSWorkspace.shared.frontmostApplication else { return nil }
+        let processInfo = FocusedCodexProcessArgumentsReader.read(pid: application.processIdentifier)
+        return FocusedCodexProcessSnapshot(
+            pid: application.processIdentifier,
+            bundleIdentifier: application.bundleIdentifier,
+            localizedName: application.localizedName,
+            executablePath: application.executableURL?.path,
+            arguments: processInfo.arguments,
+            environment: processInfo.environment
+        )
     }
 
     private func refreshUsageCacheInBackground() {
