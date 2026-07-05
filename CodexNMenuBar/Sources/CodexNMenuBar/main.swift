@@ -301,6 +301,8 @@ private struct ProfileMenuHeader: View {
 private struct TokenUsageMenuChart: View {
     let snapshot: CodexUsageSnapshot?
 
+    @State private var hoveredProfileID: String?
+
     private let width: CGFloat = 300
     private let chartHeight: CGFloat = 76
     private let colors: [Color] = [
@@ -362,7 +364,7 @@ private struct TokenUsageMenuChart: View {
 
         return HStack(alignment: .bottom, spacing: spacing) {
             ForEach(Array(profiles.enumerated()), id: \.element.id) { index, profile in
-                VStack(spacing: 4) {
+                VStack(spacing: 5) {
                     Text(Self.shortTokenString(profile.totalTokens))
                         .font(.caption2.monospacedDigit())
                         .foregroundStyle(.secondary)
@@ -370,21 +372,45 @@ private struct TokenUsageMenuChart: View {
                         .minimumScaleFactor(0.7)
                         .frame(width: max(28, barWidth + 8))
 
-                    RoundedRectangle(cornerRadius: 3, style: .continuous)
-                        .fill(colors[index % colors.count].gradient)
-                        .frame(
-                            width: barWidth,
-                            height: barHeight(tokens: profile.totalTokens, maxTokens: maxTokens)
-                        )
-                        .accessibilityLabel(profile.name)
-                        .accessibilityValue(Self.tokenString(profile.totalTokens))
+                    ZStack(alignment: .bottom) {
+                        RoundedRectangle(cornerRadius: 3, style: .continuous)
+                            .fill(colors[index % colors.count].gradient)
+                            .frame(
+                                width: barWidth,
+                                height: barHeight(tokens: profile.totalTokens, maxTokens: maxTokens)
+                            )
+                            .shadow(
+                                color: colors[index % colors.count].opacity(hoveredProfileID == profile.id ? 0.32 : 0),
+                                radius: 4,
+                                y: 1
+                            )
 
-                    Text(Self.shortName(profile.name))
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                        .truncationMode(.tail)
-                        .frame(width: max(32, barWidth + 12))
+                        if hoveredProfileID == profile.id {
+                            Text(profile.id)
+                                .font(.caption2.weight(.medium))
+                                .foregroundStyle(.primary)
+                                .lineLimit(1)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 3)
+                                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 5, style: .continuous))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 5, style: .continuous)
+                                        .strokeBorder(Color(nsColor: .separatorColor).opacity(0.55))
+                                )
+                                .fixedSize()
+                                .offset(y: -barHeight(tokens: profile.totalTokens, maxTokens: maxTokens) - 6)
+                                .zIndex(1)
+                                .allowsHitTesting(false)
+                        }
+                    }
+                    .frame(width: max(32, barWidth + 12), height: 52, alignment: .bottom)
+                    .contentShape(Rectangle())
+                    .onHover { hovering in
+                        hoveredProfileID = hovering ? profile.id : (hoveredProfileID == profile.id ? nil : hoveredProfileID)
+                    }
+                    .help("\(profile.id)\n\(Self.tokenString(profile.totalTokens)) today")
+                    .accessibilityLabel(profile.name)
+                    .accessibilityValue(Self.tokenString(profile.totalTokens))
                 }
                 .frame(maxHeight: .infinity, alignment: .bottom)
             }
@@ -396,12 +422,6 @@ private struct TokenUsageMenuChart: View {
         guard tokens > 0 else { return 2 }
         let ratio = Double(tokens) / Double(maxTokens)
         return max(6, CGFloat(ratio) * 48)
-    }
-
-    private static func shortName(_ value: String) -> String {
-        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard trimmed.count > 12 else { return trimmed }
-        return String(trimmed.prefix(10)) + ".."
     }
 
     private static func shortTokenString(_ value: UInt64) -> String {
