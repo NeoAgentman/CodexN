@@ -971,7 +971,7 @@ private struct AboutSettingsPane: View {
     }
 
     private var appVersion: String {
-        infoValue("CFBundleShortVersionString", fallback: "0.1.11")
+        infoValue("CFBundleShortVersionString", fallback: "Development")
     }
 
     private var buildNumber: String {

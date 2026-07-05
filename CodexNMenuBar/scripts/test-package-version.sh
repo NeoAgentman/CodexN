@@ -33,3 +33,15 @@ if [[ "$PINNED_VERSION" != "0.1.12" ]]; then
   echo "expected pinned version 0.1.12, got $PINNED_VERSION" >&2
   exit 1
 fi
+
+MISSING_VERSION_FILE="$TMP_DIR/MISSING_VERSION"
+if "$ROOT/scripts/package-version.sh" "$MISSING_VERSION_FILE" >/dev/null 2>&1; then
+  echo "package-version.sh should fail when VERSION file is missing and no default is explicit" >&2
+  exit 1
+fi
+
+DEFAULT_VERSION="$(CODEXN_DEFAULT_VERSION=1.2.3 "$ROOT/scripts/package-version.sh" "$MISSING_VERSION_FILE")"
+if [[ "$DEFAULT_VERSION" != "1.2.4" ]]; then
+  echo "expected explicit default version to bump to 1.2.4, got $DEFAULT_VERSION" >&2
+  exit 1
+fi

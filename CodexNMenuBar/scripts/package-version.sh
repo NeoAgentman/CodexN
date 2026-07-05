@@ -8,10 +8,13 @@ if [[ -n "${CODEXN_VERSION:-}" ]]; then
   exit 0
 fi
 
-DEFAULT_VERSION="${CODEXN_DEFAULT_VERSION:-0.1.11}"
-CURRENT_VERSION="$DEFAULT_VERSION"
 if [[ -f "$VERSION_FILE" ]]; then
   CURRENT_VERSION="$(tr -d '[:space:]' < "$VERSION_FILE")"
+elif [[ -n "${CODEXN_DEFAULT_VERSION:-}" ]]; then
+  CURRENT_VERSION="$CODEXN_DEFAULT_VERSION"
+else
+  echo "Missing VERSION file: $VERSION_FILE" >&2
+  exit 1
 fi
 
 if [[ "${CODEXN_AUTO_BUMP_VERSION:-1}" == "0" ]]; then
