@@ -24,6 +24,8 @@ public enum ProfileStoreError: Error, CustomStringConvertible {
     case invalidProviderID(String)
     case emptyRequiredField(String)
     case invalidConfigValue(String)
+    case invalidInputValue(String)
+    case invalidBaseURL(String)
 
     public var description: String {
         switch self {
@@ -45,6 +47,10 @@ public enum ProfileStoreError: Error, CustomStringConvertible {
             return "\(field) is required"
         case .invalidConfigValue(let field):
             return "Invalid config value: \(field)"
+        case .invalidInputValue(let field):
+            return "Invalid \(field)"
+        case .invalidBaseURL(let value):
+            return "Invalid base URL: \(value)"
         }
     }
 }
@@ -104,6 +110,9 @@ public final class ProfileStore {
     @discardableResult
     public func createProfile(id: String, name: String? = nil) throws -> Profile {
         try validateProfileID(id)
+        if let name {
+            try validateDisplayName(name)
+        }
         var store = try load()
         if store.profiles.contains(where: { $0.id == id }) {
             throw ProfileStoreError.profileAlreadyExists(id)
@@ -124,6 +133,9 @@ public final class ProfileStore {
         defaultElectronUserData: URL = ProfileStore.defaultElectronUserData()
     ) throws -> Profile {
         try validateProfileID(id)
+        if let name {
+            try validateDisplayName(name)
+        }
         var store = try load()
         if store.profiles.contains(where: { $0.id == id }) {
             throw ProfileStoreError.profileAlreadyExists(id)
@@ -159,8 +171,13 @@ public final class ProfileStore {
         try validateRequired("model", model)
         try validateRequired("base URL", baseURL)
         try validateRequired("API key", apiKey)
+        if let name {
+            try validateDisplayName(name)
+        }
         try validateTOMLConfigValue("model", model)
         try validateTOMLConfigValue("base URL", baseURL)
+        try validateAPIKey(apiKey)
+        try validateBaseURL(baseURL)
 
         var store = try load()
         if store.profiles.contains(where: { $0.id == id }) {
@@ -258,14 +275,14 @@ public final class ProfileStore {
     }
 
     private func validateProfileID(_ id: String) throws {
-        let pattern = #"^[A-Za-z0-9._-]+$"#
+        let pattern = #"^[A-Za-z0-9_-]+$"#
         if id.range(of: pattern, options: .regularExpression) == nil {
             throw ProfileStoreError.invalidProfileID(id)
         }
     }
 
     private func validateProviderID(_ id: String) throws {
-        let pattern = #"^[A-Za-z0-9._-]+$"#
+        let pattern = #"^[A-Za-z0-9_-]+$"#
         if id.range(of: pattern, options: .regularExpression) == nil {
             throw ProfileStoreError.invalidProviderID(id)
         }
@@ -281,6 +298,32 @@ public final class ProfileStore {
         if value.unicodeScalars.contains(where: { $0.value < 0x20 || $0.value == 0x7F }) {
             throw ProfileStoreError.invalidConfigValue(field)
         }
+    }
+
+    private func validateDisplayName(_ value: String) throws {
+        if value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || containsControlCharacter(value) {
+            throw ProfileStoreError.invalidInputValue("display name")
+        }
+    }
+
+    private func validateAPIKey(_ value: String) throws {
+        if containsControlCharacter(value) {
+            throw ProfileStoreError.invalidInputValue("API key")
+        }
+    }
+
+    private func validateBaseURL(_ value: String) throws {
+        guard let components = URLComponents(string: value),
+              let scheme = components.scheme?.lowercased(),
+              ["http", "https"].contains(scheme),
+              components.host?.isEmpty == false
+        else {
+            throw ProfileStoreError.invalidBaseURL(value)
+        }
+    }
+
+    private func containsControlCharacter(_ value: String) -> Bool {
+        value.unicodeScalars.contains { $0.value < 0x20 || $0.value == 0x7F }
     }
 
     private func writeAPIKeyConfig(profile: Profile, provider: String, model: String, baseURL: String, envName: String) throws {

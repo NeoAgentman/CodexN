@@ -6,9 +6,12 @@ struct TestRunner {
     static func main() throws {
         try createsEmptyProfileDirectoriesWithoutCodexConfig()
         try refusesToCreateOverNonEmptyProfileDirectory()
+        try rejectsProfileIDsWithPathLikeCharacters()
         try importsDefaultCodexHomeAndElectronData()
         try createsAPIKeyProfileWithoutLeakingKeyToConfig()
         try rejectsInvalidAPIKeyProviderID()
+        try rejectsAPIKeyProfileInputsWithIllegalCharacters()
+        try rejectsInvalidAPIKeyBaseURL()
         try rejectsAPIKeyConfigValuesWithControlCharacters()
         try protectsProfileRegistryAndDirectoriesWithOwnerOnlyPermissions()
         try tightensExistingProfileRegistryPermissions()
@@ -73,6 +76,25 @@ struct TestRunner {
             throw TestFailure("createProfile should reject a non-empty profile directory")
         } catch {
             try expect(String(describing: error).contains("Profile directory is not empty"), "wrong error: \(error)")
+        }
+    }
+
+    private static func rejectsProfileIDsWithPathLikeCharacters() throws {
+        let root = try temporaryDirectory()
+        let store = ProfileStore(root: root)
+
+        do {
+            _ = try store.createProfile(id: "work.profile", name: "Work")
+            throw TestFailure("createProfile should reject profile ids with dots")
+        } catch {
+            try expect(String(describing: error).contains("Invalid profile id"), "wrong dotted id error: \(error)")
+        }
+
+        do {
+            _ = try store.createProfile(id: "..", name: "Parent")
+            throw TestFailure("createProfile should reject path-like profile ids")
+        } catch {
+            try expect(String(describing: error).contains("Invalid profile id"), "wrong parent id error: \(error)")
         }
     }
 
@@ -154,6 +176,69 @@ struct TestRunner {
             throw TestFailure("createAPIKeyProfile should reject invalid provider ids")
         } catch {
             try expect(String(describing: error).contains("Invalid provider id"), "wrong error: \(error)")
+        }
+    }
+
+    private static func rejectsAPIKeyProfileInputsWithIllegalCharacters() throws {
+        let root = try temporaryDirectory()
+        let store = ProfileStore(root: root)
+
+        do {
+            _ = try store.createAPIKeyProfile(
+                id: "nested-provider",
+                provider: "foo.bar",
+                model: "gpt-5.5",
+                baseURL: "https://example.test/v1",
+                apiKey: "secret"
+            )
+            throw TestFailure("createAPIKeyProfile should reject provider ids that would create nested TOML tables")
+        } catch {
+            try expect(String(describing: error).contains("Invalid provider id"), "wrong provider dot error: \(error)")
+        }
+
+        do {
+            _ = try store.createAPIKeyProfile(
+                id: "bad-name",
+                name: "Bad\nName",
+                provider: "zl",
+                model: "gpt-5.5",
+                baseURL: "https://example.test/v1",
+                apiKey: "secret"
+            )
+            throw TestFailure("createAPIKeyProfile should reject display names with control characters")
+        } catch {
+            try expect(String(describing: error).contains("Invalid display name"), "wrong display name error: \(error)")
+        }
+
+        do {
+            _ = try store.createAPIKeyProfile(
+                id: "bad-key",
+                provider: "zl",
+                model: "gpt-5.5",
+                baseURL: "https://example.test/v1",
+                apiKey: "secret\nnext"
+            )
+            throw TestFailure("createAPIKeyProfile should reject API keys with control characters")
+        } catch {
+            try expect(String(describing: error).contains("Invalid API key"), "wrong API key error: \(error)")
+        }
+    }
+
+    private static func rejectsInvalidAPIKeyBaseURL() throws {
+        let root = try temporaryDirectory()
+        let store = ProfileStore(root: root)
+
+        do {
+            _ = try store.createAPIKeyProfile(
+                id: "bad-url",
+                provider: "zl",
+                model: "gpt-5.5",
+                baseURL: "not a url",
+                apiKey: "secret"
+            )
+            throw TestFailure("createAPIKeyProfile should reject invalid base URLs")
+        } catch {
+            try expect(String(describing: error).contains("Invalid base URL"), "wrong base URL error: \(error)")
         }
     }
 
