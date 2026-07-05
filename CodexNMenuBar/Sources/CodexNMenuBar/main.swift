@@ -7,6 +7,7 @@ import SwiftUI
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private let store = ProfileStore()
     private let launcher = Launcher()
+    private let usageCache = CodexUsageCacheStore()
     private var statusItem: NSStatusItem?
     private var statusMenu: NSMenu?
     private var settingsWindowController: SettingsWindowController?
@@ -80,6 +81,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
 
         menu.addItem(.separator())
+        addUsageMenuItem(to: menu)
+        menu.addItem(.separator())
         menu.addItem(menuItem("Settings...", symbol: "gearshape", action: #selector(settingsFromMenu)))
         menu.addItem(menuItem("Open Profiles Folder", symbol: "folder", action: #selector(openProfilesFolderFromMenu)))
         menu.addItem(.separator())
@@ -92,6 +95,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         item.target = self
         item.image = NSImage(systemSymbolName: symbol, accessibilityDescription: title)
         return item
+    }
+
+    private func addUsageMenuItem(to menu: NSMenu) {
+        let snapshot = (try? usageCache.read()) ?? nil
+        let chart = TokenUsageMenuChart(snapshot: snapshot)
+        let hosting = MenuHostingView(rootView: chart)
+        let width: CGFloat = 300
+        hosting.frame = NSRect(x: 0, y: 0, width: width, height: 1)
+        let height = max(1, ceil(hosting.fittingSize.height))
+        hosting.applyMeasuredSize(width: width, height: height)
+
+        let item = NSMenuItem()
+        item.view = hosting
+        item.isEnabled = false
+        menu.addItem(item)
     }
 
     private func profileMenuItem(_ title: String, symbol: String, action: Selector, profileID: String) -> NSMenuItem {
@@ -225,6 +243,141 @@ private struct ProfileMenuHeader: View {
         .padding(.horizontal, 10)
         .padding(.vertical, 7)
         .frame(width: 280, alignment: .leading)
+    }
+}
+
+private struct TokenUsageMenuChart: View {
+    let snapshot: CodexUsageSnapshot?
+
+    private let width: CGFloat = 300
+    private let chartHeight: CGFloat = 76
+    private let colors: [Color] = [
+        Color(red: 0.26, green: 0.55, blue: 0.96),
+        Color(red: 0.46, green: 0.72, blue: 0.38),
+        Color(red: 0.94, green: 0.58, blue: 0.24),
+        Color(red: 0.72, green: 0.40, blue: 0.86),
+        Color(red: 0.25, green: 0.70, blue: 0.78),
+        Color(red: 0.86, green: 0.34, blue: 0.42)
+    ]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .firstTextBaseline) {
+                Text("Token Usage")
+                    .font(.caption.weight(.semibold))
+                Spacer()
+                Text(totalLabel)
+                    .font(.caption.monospacedDigit().weight(.medium))
+                    .foregroundStyle(.secondary)
+            }
+
+            if let snapshot {
+                if snapshot.profiles.isEmpty {
+                    emptyState("No usage data today")
+                } else {
+                    chart(for: snapshot.profiles)
+                }
+
+                Text("Updated \(Self.timeString(snapshot.generatedAt))")
+                    .font(.caption2)
+                    .foregroundStyle(Color(nsColor: .tertiaryLabelColor))
+            } else {
+                emptyState("Usage data is updating")
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 9)
+        .frame(width: width, alignment: .leading)
+    }
+
+    private var totalLabel: String {
+        guard let snapshot else { return "Updating" }
+        return "\(Self.tokenString(snapshot.totalTokens)) today"
+    }
+
+    private func emptyState(_ text: String) -> some View {
+        Text(text)
+            .font(.footnote)
+            .foregroundStyle(.secondary)
+            .frame(maxWidth: .infinity, minHeight: 34, alignment: .leading)
+    }
+
+    private func chart(for profiles: [CodexUsageProfileSnapshot]) -> some View {
+        let maxTokens = max(profiles.map(\.totalTokens).max() ?? 0, 1)
+        let spacing: CGFloat = profiles.count > 6 ? 5 : 8
+        let availableWidth = width - 24
+        let barWidth = max(10, min(26, (availableWidth - CGFloat(max(0, profiles.count - 1)) * spacing) / CGFloat(max(1, profiles.count))))
+
+        return HStack(alignment: .bottom, spacing: spacing) {
+            ForEach(Array(profiles.enumerated()), id: \.element.id) { index, profile in
+                VStack(spacing: 4) {
+                    Text(Self.shortTokenString(profile.totalTokens))
+                        .font(.caption2.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                        .frame(width: max(28, barWidth + 8))
+
+                    RoundedRectangle(cornerRadius: 3, style: .continuous)
+                        .fill(colors[index % colors.count].gradient)
+                        .frame(
+                            width: barWidth,
+                            height: barHeight(tokens: profile.totalTokens, maxTokens: maxTokens)
+                        )
+                        .accessibilityLabel(profile.name)
+                        .accessibilityValue(Self.tokenString(profile.totalTokens))
+
+                    Text(Self.shortName(profile.name))
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .frame(width: max(32, barWidth + 12))
+                }
+                .frame(maxHeight: .infinity, alignment: .bottom)
+            }
+        }
+        .frame(maxWidth: .infinity, minHeight: chartHeight, maxHeight: chartHeight, alignment: .bottom)
+    }
+
+    private func barHeight(tokens: UInt64, maxTokens: UInt64) -> CGFloat {
+        guard tokens > 0 else { return 2 }
+        let ratio = Double(tokens) / Double(maxTokens)
+        return max(6, CGFloat(ratio) * 48)
+    }
+
+    private static func shortName(_ value: String) -> String {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.count > 12 else { return trimmed }
+        return String(trimmed.prefix(10)) + ".."
+    }
+
+    private static func shortTokenString(_ value: UInt64) -> String {
+        if value == 0 { return "0" }
+        if value >= 1_000_000 {
+            return String(format: "%.1fM", Double(value) / 1_000_000)
+        }
+        if value >= 1_000 {
+            return String(format: "%.0fK", Double(value) / 1_000)
+        }
+        return "\(value)"
+    }
+
+    private static func tokenString(_ value: UInt64) -> String {
+        if value >= 1_000_000 {
+            return String(format: "%.2fM", Double(value) / 1_000_000)
+        }
+        if value >= 1_000 {
+            return String(format: "%.1fK", Double(value) / 1_000)
+        }
+        return "\(value)"
+    }
+
+    private static func timeString(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .none
+        formatter.timeStyle = .short
+        return formatter.string(from: date)
     }
 }
 
