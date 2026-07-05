@@ -23,6 +23,7 @@ public enum ProfileStoreError: Error, CustomStringConvertible {
     case processFailed(String, Int32)
     case invalidProviderID(String)
     case emptyRequiredField(String)
+    case invalidConfigValue(String)
 
     public var description: String {
         switch self {
@@ -42,6 +43,8 @@ public enum ProfileStoreError: Error, CustomStringConvertible {
             return "Invalid provider id: \(id)"
         case .emptyRequiredField(let field):
             return "\(field) is required"
+        case .invalidConfigValue(let field):
+            return "Invalid config value: \(field)"
         }
     }
 }
@@ -79,8 +82,11 @@ public final class ProfileStore {
     }
 
     public func ensureStore() throws {
-        try fileManager.createDirectory(at: root, withIntermediateDirectories: true)
-        guard !fileManager.fileExists(atPath: storeURL.path) else { return }
+        try secureDirectory(root)
+        guard !fileManager.fileExists(atPath: storeURL.path) else {
+            try setOwnerOnlyFilePermissions(storeURL)
+            return
+        }
         try save(Store(version: 1, profiles: []))
     }
 
@@ -153,6 +159,8 @@ public final class ProfileStore {
         try validateRequired("model", model)
         try validateRequired("base URL", baseURL)
         try validateRequired("API key", apiKey)
+        try validateTOMLConfigValue("model", model)
+        try validateTOMLConfigValue("base URL", baseURL)
 
         var store = try load()
         if store.profiles.contains(where: { $0.id == id }) {
@@ -203,7 +211,7 @@ public final class ProfileStore {
     }
 
     private func save(_ store: Store) throws {
-        try fileManager.createDirectory(at: root, withIntermediateDirectories: true)
+        try secureDirectory(root)
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .custom { date, encoder in
             var container = encoder.singleValueContainer()
@@ -211,7 +219,8 @@ public final class ProfileStore {
         }
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         let data = try encoder.encode(store)
-        try data.write(to: storeURL)
+        try data.write(to: storeURL, options: [.atomic])
+        try setOwnerOnlyFilePermissions(storeURL)
     }
 
     private func makeProfile(id: String, name: String) -> Profile {
@@ -233,9 +242,10 @@ public final class ProfileStore {
     }
 
     private func materialize(_ profile: Profile) throws {
-        try fileManager.createDirectory(at: profile.codexHome, withIntermediateDirectories: true)
-        try fileManager.createDirectory(at: profile.electronUserData, withIntermediateDirectories: true)
-        try fileManager.createDirectory(at: profile.logDir, withIntermediateDirectories: true)
+        try secureDirectory(profile.codexHome.deletingLastPathComponent())
+        try secureDirectory(profile.codexHome)
+        try secureDirectory(profile.electronUserData)
+        try secureDirectory(profile.logDir)
     }
 
     private func assertProfileRootAvailable(_ profile: Profile) throws {
@@ -267,6 +277,12 @@ public final class ProfileStore {
         }
     }
 
+    private func validateTOMLConfigValue(_ field: String, _ value: String) throws {
+        if value.unicodeScalars.contains(where: { $0.value < 0x20 || $0.value == 0x7F }) {
+            throw ProfileStoreError.invalidConfigValue(field)
+        }
+    }
+
     private func writeAPIKeyConfig(profile: Profile, provider: String, model: String, baseURL: String, envName: String) throws {
         let config = """
         model = "\(tomlString(model))"
@@ -280,6 +296,19 @@ public final class ProfileStore {
 
         """
         try config.write(to: profile.codexHome.appending(path: "config.toml"), atomically: true, encoding: .utf8)
+    }
+
+    private func secureDirectory(_ url: URL) throws {
+        try fileManager.createDirectory(
+            at: url,
+            withIntermediateDirectories: true,
+            attributes: [.posixPermissions: 0o700]
+        )
+        try fileManager.setAttributes([.posixPermissions: 0o700], ofItemAtPath: url.path)
+    }
+
+    private func setOwnerOnlyFilePermissions(_ url: URL) throws {
+        try fileManager.setAttributes([.posixPermissions: 0o600], ofItemAtPath: url.path)
     }
 
     private func runDitto(arguments: [String]) throws {

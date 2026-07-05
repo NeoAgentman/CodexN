@@ -9,6 +9,9 @@ struct TestRunner {
         try importsDefaultCodexHomeAndElectronData()
         try createsAPIKeyProfileWithoutLeakingKeyToConfig()
         try rejectsInvalidAPIKeyProviderID()
+        try rejectsAPIKeyConfigValuesWithControlCharacters()
+        try protectsProfileRegistryAndDirectoriesWithOwnerOnlyPermissions()
+        try tightensExistingProfileRegistryPermissions()
         try buildsLaunchCommandsWithProfileIsolation()
         try injectsAPIKeyEnvironmentIntoLaunchCommands()
         try readsLegacyProfileRegistry()
@@ -151,11 +154,79 @@ struct TestRunner {
         }
     }
 
+    private static func rejectsAPIKeyConfigValuesWithControlCharacters() throws {
+        let root = try temporaryDirectory()
+        let store = ProfileStore(root: root)
+
+        do {
+            _ = try store.createAPIKeyProfile(
+                id: "bad-model",
+                provider: "zl",
+                model: "gpt-5.5\n[model_providers.attack]",
+                baseURL: "https://example.test/v1",
+                apiKey: "secret"
+            )
+            throw TestFailure("createAPIKeyProfile should reject model values with TOML control characters")
+        } catch {
+            try expect(String(describing: error).contains("Invalid config value"), "wrong model error: \(error)")
+        }
+
+        do {
+            _ = try store.createAPIKeyProfile(
+                id: "bad-url",
+                provider: "zl",
+                model: "gpt-5.5",
+                baseURL: "https://example.test/v1\nenv_key=\"LEAK\"",
+                apiKey: "secret"
+            )
+            throw TestFailure("createAPIKeyProfile should reject base URL values with TOML control characters")
+        } catch {
+            try expect(String(describing: error).contains("Invalid config value"), "wrong base URL error: \(error)")
+        }
+    }
+
+    private static func protectsProfileRegistryAndDirectoriesWithOwnerOnlyPermissions() throws {
+        let root = try temporaryDirectory()
+        let store = ProfileStore(root: root)
+        let profile = try store.createAPIKeyProfile(
+            id: "secure",
+            provider: "zl",
+            model: "gpt-5.5",
+            baseURL: "https://example.test/v1",
+            apiKey: "secret"
+        )
+
+        try expect(try permissions(root) == 0o700, "profile root should be 0700")
+        try expect(try permissions(root.appending(path: "profiles.json")) == 0o600, "profiles.json should be 0600")
+        try expect(try permissions(profile.codexHome.deletingLastPathComponent()) == 0o700, "profile directory should be 0700")
+        try expect(try permissions(profile.codexHome) == 0o700, "codex-home should be 0700")
+        try expect(try permissions(profile.electronUserData) == 0o700, "electron user data should be 0700")
+        try expect(try permissions(profile.logDir) == 0o700, "logs should be 0700")
+    }
+
+    private static func tightensExistingProfileRegistryPermissions() throws {
+        let root = try temporaryDirectory()
+        let registry = root.appending(path: "profiles.json")
+        try #"{"profiles":[],"version":1}"#.write(to: registry, atomically: true, encoding: .utf8)
+        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: root.path)
+        try FileManager.default.setAttributes([.posixPermissions: 0o644], ofItemAtPath: registry.path)
+
+        _ = try ProfileStore(root: root).listProfiles()
+
+        try expect(try permissions(root) == 0o700, "existing profile root should be tightened to 0700")
+        try expect(try permissions(registry) == 0o600, "existing profiles.json should be tightened to 0600")
+    }
+
     private static func temporaryDirectory() throws -> URL {
         let url = FileManager.default.temporaryDirectory
             .appending(path: "codexn-menubar-tests-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
         return url
+    }
+
+    private static func permissions(_ url: URL) throws -> Int {
+        let attributes = try FileManager.default.attributesOfItem(atPath: url.path)
+        return (attributes[.posixPermissions] as? NSNumber)?.intValue ?? -1
     }
 
     private static func buildsLaunchCommandsWithProfileIsolation() throws {
