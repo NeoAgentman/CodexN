@@ -666,7 +666,7 @@ private struct SettingsRootView: View {
 
             Divider()
 
-            SettingsDetailPane(title: selection.title) {
+            SettingsDetailPane {
                 switch selection {
                 case .general:
                     GeneralSettingsPane()
@@ -724,24 +724,11 @@ private struct SettingsRootView: View {
 }
 
 private struct SettingsDetailPane<Content: View>: View {
-    let title: String
     @ViewBuilder let content: () -> Content
 
     var body: some View {
-        VStack(spacing: 0) {
-            HStack {
-                Text(title)
-                    .font(.title3.weight(.semibold))
-                Spacer()
-            }
-            .padding(.horizontal, 22)
-            .padding(.vertical, 16)
-
-            Divider()
-
-            content()
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-        }
+        content()
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 
@@ -787,7 +774,7 @@ private struct GeneralSettingsPane: View {
 
     var body: some View {
         Form {
-            Section("General") {
+            Section {
                 Toggle(isOn: $launchAtLogin) {
                     SettingsRowLabel(
                         "Open at Login",
@@ -952,7 +939,7 @@ private struct ProfilesSettingsPane: View {
 
     var body: some View {
         Form {
-            Section("Profiles") {
+            Section("Saved Profiles") {
                 if profiles.isEmpty {
                     Text("No profiles")
                         .foregroundStyle(.secondary)
