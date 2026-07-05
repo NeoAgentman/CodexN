@@ -45,11 +45,11 @@ Build and package:
 ```bash
 swift run CodexNCoreTestRunner
 swift build --product CodexNMenuBar
-scripts/package-app.sh
+scripts/package-app.sh 0.1.12
 open CodexN.app
 ```
 
-`scripts/package-app.sh` automatically increments the patch version in `VERSION` each time it packages the app. Use `CODEXN_AUTO_BUMP_VERSION=0 scripts/package-app.sh` to package without changing `VERSION`, or `CODEXN_VERSION=0.1.99 scripts/package-app.sh` to package with an explicit temporary version.
+`scripts/package-app.sh` requires an explicit semantic version and does not read or update a `VERSION` file. You can pass the version as the first argument, or use `CODEXN_VERSION=0.1.12 scripts/package-app.sh`.
 
 Install locally:
 

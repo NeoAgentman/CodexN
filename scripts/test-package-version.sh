@@ -8,40 +8,34 @@ trap 'rm -rf "$TMP_DIR"' EXIT
 VERSION_FILE="$TMP_DIR/VERSION"
 printf '0.1.11\n' > "$VERSION_FILE"
 
-NEXT_VERSION="$("$ROOT/scripts/package-version.sh" "$VERSION_FILE")"
-if [[ "$NEXT_VERSION" != "0.1.12" ]]; then
-  echo "expected bumped version 0.1.12, got $NEXT_VERSION" >&2
-  exit 1
-fi
-if [[ "$(cat "$VERSION_FILE")" != "0.1.12" ]]; then
-  echo "expected VERSION file to contain 0.1.12" >&2
+if "$ROOT/scripts/package-version.sh" >/dev/null 2>&1; then
+  echo "package-version.sh should fail when no explicit version is provided" >&2
   exit 1
 fi
 
-OVERRIDE_VERSION="$(CODEXN_VERSION=9.8.7 "$ROOT/scripts/package-version.sh" "$VERSION_FILE")"
+if "$ROOT/scripts/package-app.sh" >/dev/null 2>&1; then
+  echo "package-app.sh should fail when no explicit version is provided" >&2
+  exit 1
+fi
+
+ARG_VERSION="$("$ROOT/scripts/package-version.sh" 9.8.7)"
+if [[ "$ARG_VERSION" != "9.8.7" ]]; then
+  echo "expected argument version 9.8.7, got $ARG_VERSION" >&2
+  exit 1
+fi
+
+OVERRIDE_VERSION="$(CODEXN_VERSION=9.8.7 "$ROOT/scripts/package-version.sh")"
 if [[ "$OVERRIDE_VERSION" != "9.8.7" ]]; then
   echo "expected override version 9.8.7, got $OVERRIDE_VERSION" >&2
   exit 1
 fi
-if [[ "$(cat "$VERSION_FILE")" != "0.1.12" ]]; then
-  echo "CODEXN_VERSION override should not rewrite VERSION file" >&2
+
+if [[ "$(cat "$VERSION_FILE")" != "0.1.11" ]]; then
+  echo "explicit version resolution should not rewrite VERSION file" >&2
   exit 1
 fi
 
-PINNED_VERSION="$(CODEXN_AUTO_BUMP_VERSION=0 "$ROOT/scripts/package-version.sh" "$VERSION_FILE")"
-if [[ "$PINNED_VERSION" != "0.1.12" ]]; then
-  echo "expected pinned version 0.1.12, got $PINNED_VERSION" >&2
-  exit 1
-fi
-
-MISSING_VERSION_FILE="$TMP_DIR/MISSING_VERSION"
-if "$ROOT/scripts/package-version.sh" "$MISSING_VERSION_FILE" >/dev/null 2>&1; then
-  echo "package-version.sh should fail when VERSION file is missing and no default is explicit" >&2
-  exit 1
-fi
-
-DEFAULT_VERSION="$(CODEXN_DEFAULT_VERSION=1.2.3 "$ROOT/scripts/package-version.sh" "$MISSING_VERSION_FILE")"
-if [[ "$DEFAULT_VERSION" != "1.2.4" ]]; then
-  echo "expected explicit default version to bump to 1.2.4, got $DEFAULT_VERSION" >&2
+if "$ROOT/scripts/package-version.sh" 9.8 >/dev/null 2>&1; then
+  echo "package-version.sh should reject invalid semantic versions" >&2
   exit 1
 fi
