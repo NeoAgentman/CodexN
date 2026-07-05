@@ -14,7 +14,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var usageRefreshTimer: Timer?
     private var usageRefreshTask: Task<Error?, Never>?
 
-    private static let usageRefreshInterval: TimeInterval = 5 * 60
+    private static let usageRefreshInterval: TimeInterval = 30 * 60
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -881,7 +881,7 @@ private struct AboutSettingsPane: View {
     }
 
     private var appVersion: String {
-        infoValue("CFBundleShortVersionString", fallback: "0.1.10")
+        infoValue("CFBundleShortVersionString", fallback: "0.1.11")
     }
 
     private var buildNumber: String {
