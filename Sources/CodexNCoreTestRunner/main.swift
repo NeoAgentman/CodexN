@@ -33,6 +33,7 @@ struct TestRunner {
         try scansTodayUsageFromCodexHomes()
         try scansRecentlyModifiedOlderCodexSessionPartitionsOnly()
         try computesUsageListBarWidths()
+        try formatsTokenUsageValues()
         try writesAndReadsUsageCache()
         print("CodexNCoreTestRunner: all tests passed")
     }
@@ -615,6 +616,18 @@ struct TestRunner {
             TokenUsageChartLayout.horizontalBarWidth(tokens: 1, maxTokens: 100, availableWidth: 120, minVisibleWidth: 6) == 6,
             "nonzero tiny usage should keep a minimum visible usage list bar"
         )
+    }
+
+    private static func formatsTokenUsageValues() throws {
+        try expect(TokenUsageFormatting.shortTokenString(0) == "0", "zero short token usage should be plain")
+        try expect(TokenUsageFormatting.shortTokenString(11_000) == "11K", "short token usage should abbreviate thousands")
+        try expect(TokenUsageFormatting.shortTokenString(100_140_000) == "100.1M", "short token usage should abbreviate millions")
+        try expect(TokenUsageFormatting.shortTokenString(1_234_000_000) == "1.2B", "short token usage should abbreviate billions")
+
+        try expect(TokenUsageFormatting.tokenString(900) == "900", "token usage below one thousand should be plain")
+        try expect(TokenUsageFormatting.tokenString(11_000) == "11.0K", "token usage should abbreviate thousands")
+        try expect(TokenUsageFormatting.tokenString(100_140_000) == "100.14M", "token usage should abbreviate millions")
+        try expect(TokenUsageFormatting.tokenString(1_234_000_000) == "1.23B", "token usage should abbreviate billions")
     }
 
     private static func writesAndReadsUsageCache() throws {

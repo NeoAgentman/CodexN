@@ -485,7 +485,7 @@ private struct TokenUsageMenuChart: View {
 
     private var totalLabel: String {
         guard let snapshot else { return "Updating" }
-        return "\(Self.tokenString(snapshot.totalTokens)) today"
+        return "\(TokenUsageFormatting.tokenString(snapshot.totalTokens)) today"
     }
 
     private func emptyState(_ text: String) -> some View {
@@ -505,7 +505,7 @@ private struct TokenUsageMenuChart: View {
             VStack(alignment: .leading, spacing: usageRowSpacing) {
                 ForEach(Array(profiles.enumerated()), id: \.element.id) { index, profile in
                     HStack(spacing: 10) {
-                        Text(Self.shortTokenString(profile.totalTokens))
+                        Text(TokenUsageFormatting.shortTokenString(profile.totalTokens))
                             .font(.caption2.monospacedDigit())
                             .foregroundStyle(.secondary)
                             .lineLimit(1)
@@ -533,7 +533,7 @@ private struct TokenUsageMenuChart: View {
                         }
                         .frame(width: barAvailableWidth, height: usageRowHeight, alignment: .leading)
                         .accessibilityLabel(profile.name)
-                        .accessibilityValue(Self.tokenString(profile.totalTokens))
+                        .accessibilityValue(TokenUsageFormatting.tokenString(profile.totalTokens))
                     }
                     .frame(width: availableWidth, height: usageRowHeight, alignment: .leading)
                 }
@@ -618,27 +618,6 @@ private struct TokenUsageMenuChart: View {
 
     private func estimatedTooltipWidth(for value: String) -> CGFloat {
         min(180, CGFloat(value.count) * 7 + 14)
-    }
-
-    private static func shortTokenString(_ value: UInt64) -> String {
-        if value == 0 { return "0" }
-        if value >= 1_000_000 {
-            return String(format: "%.1fM", Double(value) / 1_000_000)
-        }
-        if value >= 1_000 {
-            return String(format: "%.0fK", Double(value) / 1_000)
-        }
-        return "\(value)"
-    }
-
-    private static func tokenString(_ value: UInt64) -> String {
-        if value >= 1_000_000 {
-            return String(format: "%.2fM", Double(value) / 1_000_000)
-        }
-        if value >= 1_000 {
-            return String(format: "%.1fK", Double(value) / 1_000)
-        }
-        return "\(value)"
     }
 
     private static func timeString(_ date: Date) -> String {
