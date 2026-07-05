@@ -767,8 +767,12 @@ private struct AboutSettingsPane: View {
                         Image(systemName: "arrow.up.right")
                             .foregroundStyle(.secondary)
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .help(repositoryURL.absoluteString)
+                .accessibilityLabel("Open GitHub repository")
             }
         }
         .formStyle(.grouped)
