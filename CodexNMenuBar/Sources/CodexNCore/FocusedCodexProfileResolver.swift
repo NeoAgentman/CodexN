@@ -32,8 +32,15 @@ public struct FocusedCodexProcessSnapshot: Equatable {
 }
 
 public enum FocusedCodexProfileResolver {
+    public static let profileIDEnvironmentKey = "CODEXN_PROFILE_ID"
+
     public static func resolve(snapshot: FocusedCodexProcessSnapshot?, profiles: [Profile]) -> FocusedCodexProfileLabel {
         guard let snapshot, isCodexApp(snapshot) else { return .none }
+
+        if let profileID = snapshot.environment[profileIDEnvironmentKey]?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !profileID.isEmpty {
+            return .profile(id: profileID)
+        }
 
         let candidatePaths = profileCandidatePaths(snapshot: snapshot)
         for profile in profiles {

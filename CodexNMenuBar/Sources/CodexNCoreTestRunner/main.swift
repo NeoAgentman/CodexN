@@ -14,6 +14,7 @@ struct TestRunner {
         try readsLegacyProfileRegistry()
         try buildsDefaultLaunchCommandsWithoutProfileIsolation()
         try stripsCodexEnvironmentWhenLaunchingDefaultApp()
+        try resolvesFocusedManagedProfileFromExplicitProfileEnvironment()
         try resolvesFocusedManagedProfileFromCodexHomeEnvironment()
         try resolvesFocusedManagedProfileFromElectronUserDataEnvironment()
         try resolvesFocusedManagedProfileFromUserDataDirArgument()
@@ -160,6 +161,10 @@ struct TestRunner {
         let launcher = Launcher()
 
         let desktopArguments = launcher.desktopOpenArguments(profile: profile)
+        try expect(
+            desktopArguments.contains("CODEXN_PROFILE_ID=work"),
+            "desktop args should include explicit CodexN profile id"
+        )
         try expect(desktopArguments.contains("CODEX_HOME=\(profile.codexHome.path)"), "desktop args should include CODEX_HOME")
         try expect(
             desktopArguments.contains("CODEX_ELECTRON_USER_DATA_PATH=\(profile.electronUserData.path)"),
@@ -251,6 +256,14 @@ struct TestRunner {
         try expect(environment["CODEX_INTERNAL_ORIGINATOR_OVERRIDE"] == nil, "default launch should remove Codex internal env")
         try expect(environment["CODEXN_API_KEY_ZL_ABC"] == nil, "default launch should remove CodexN API key env")
         try expect(environment["CODEXN_ROOT"] == nil, "default launch should remove CodexN root env")
+    }
+
+    private static func resolvesFocusedManagedProfileFromExplicitProfileEnvironment() throws {
+        let snapshot = codexProcessSnapshot(environment: ["CODEXN_PROFILE_ID": "work"])
+
+        let label = FocusedCodexProfileResolver.resolve(snapshot: snapshot, profiles: [])
+
+        try expect(label == .profile(id: "work"), "explicit CodexN profile id should identify the focused profile")
     }
 
     private static func resolvesFocusedManagedProfileFromCodexHomeEnvironment() throws {

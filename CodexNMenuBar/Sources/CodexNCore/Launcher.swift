@@ -19,6 +19,7 @@ public struct Launcher {
         var arguments = [
             "-n",
             appURL.path,
+            "--env", "\(FocusedCodexProfileResolver.profileIDEnvironmentKey)=\(profile.id)",
             "--env", "CODEX_HOME=\(profile.codexHome.path)",
             "--env", "CODEX_ELECTRON_USER_DATA_PATH=\(profile.electronUserData.path)"
         ]
