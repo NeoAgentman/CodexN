@@ -7,6 +7,7 @@ It provides:
 - a Swift menu bar app for opening isolated Codex app profiles
 - isolated `CODEX_HOME` and Electron user-data directories per profile
 - a `Default Codex` entry for launching the normal system Codex environment
+- a menu bar token-usage chart for today's per-profile Codex usage
 - Settings for managing profiles, adding profiles, controlling app startup behavior, and viewing app version details
 
 This is useful when you want separate Codex accounts, providers, auth state, sessions, plugins, and Desktop user data on the same Mac.
@@ -56,6 +57,7 @@ The menu bar app supports:
 
 - opening the system default Codex by clicking the first-level `Default Codex` menu item
 - opening a profile's Codex app by clicking that profile directly in the first-level menu
+- viewing today's token usage as a cached menu bar chart, refreshed in the background every 5 minutes
 - creating empty OAuth-login profiles from `Settings...` -> `Profiles`
 - importing the current default Codex profile from `Settings...` -> `Profiles`
 - creating custom API-key profiles from `Settings...` -> `Profiles`
@@ -67,6 +69,8 @@ The menu bar app supports:
 For the first local version, custom API keys are stored in `~/.codex-profiles/profiles.json`. The generated `config.toml` stores only a random `env_key`; CodexN injects the matching API key into the child process environment when launching that profile.
 
 `Remove Profile` only removes the profile from `profiles.json`. It does not delete that profile's `codex-home`, `electron-user-data`, or `logs` directories from disk.
+
+Usage statistics are read from each profile's `codex-home/sessions` and `codex-home/archived_sessions` logs, plus the system default `~/.codex` logs. CodexN records the latest totals in `~/.codex-profiles/usage-cache.json`; the menu only reads that cache and does not estimate cost.
 
 ## Development
 
