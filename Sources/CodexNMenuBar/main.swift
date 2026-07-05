@@ -76,7 +76,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(headerItem)
         menu.addItem(.separator())
 
-        menu.addItem(menuItem("Default Codex", symbol: "house", action: #selector(openDefaultCodexApp)))
+        menu.addItem(menuItem("Open Default Codex", symbol: "house", action: #selector(openDefaultCodexApp)))
 
         if let loadError {
             let errorItem = NSMenuItem(title: "Failed to load profiles", action: nil, keyEquivalent: "")
@@ -151,7 +151,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     private func profileMenuTitle(_ profile: Profile) -> String {
-        profile.name
+        "Open \(profile.name)"
     }
 
     private func runMenuAction(_ action: () throws -> Void) {
