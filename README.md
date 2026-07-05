@@ -45,11 +45,11 @@ Build and package:
 ```bash
 swift run CodexNCoreTestRunner
 swift build --product CodexNMenuBar
-scripts/package-app.sh 0.1.12
+scripts/package-app.sh <version>
 open CodexN.app
 ```
 
-`scripts/package-app.sh` requires an explicit semantic version and does not read or update a `VERSION` file. You can pass the version as the first argument, or use `CODEXN_VERSION=0.1.12 scripts/package-app.sh`.
+`scripts/package-app.sh` requires an explicit semantic version and does not read or update a `VERSION` file. You can pass the version as the first argument, or use `CODEXN_VERSION=<version> scripts/package-app.sh`.
 
 Install locally:
 
@@ -61,6 +61,7 @@ The menu bar app supports:
 
 - opening the system default Codex by clicking the first-level `Default Codex` menu item
 - opening a profile's Codex app by clicking that profile directly in the first-level menu
+- opening the Profiles settings pane from the profile group with `Add Profile...`
 - showing the currently focused Codex environment in the menu bar title, with the active profile id highlighted
 - viewing today's token usage as a cached menu bar chart, refreshed in the background at launch and every 30 minutes
 - creating empty OAuth-login profiles from `Settings...` -> `Profiles` -> `Add Profile`

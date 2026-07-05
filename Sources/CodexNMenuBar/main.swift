@@ -98,7 +98,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 menu.addItem(item)
             }
         }
-        menu.addItem(menuItem("Add Profile...", symbol: "plus", action: #selector(addProfileFromMenu)))
+        menu.addItem(addProfileMenuItem())
 
         menu.addItem(.separator())
         addUsageMenuItem(to: menu)
@@ -114,6 +114,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let item = NSMenuItem(title: title, action: action, keyEquivalent: "")
         item.target = self
         item.image = NSImage(systemSymbolName: symbol, accessibilityDescription: title)
+        return item
+    }
+
+    private func addProfileMenuItem() -> NSMenuItem {
+        let title = "Add Profile..."
+        let item = menuItem(title, symbol: "plus.circle", action: #selector(addProfileFromMenu))
+        item.attributedTitle = NSAttributedString(
+            string: title,
+            attributes: [
+                .foregroundColor: NSColor.controlAccentColor
+            ]
+        )
         return item
     }
 
