@@ -47,6 +47,8 @@ scripts/package-app.sh
 open CodexN.app
 ```
 
+`scripts/package-app.sh` automatically increments the patch version in `CodexNMenuBar/VERSION` each time it packages the app. Use `CODEXN_AUTO_BUMP_VERSION=0 scripts/package-app.sh` to package without changing `VERSION`, or `CODEXN_VERSION=0.1.99 scripts/package-app.sh` to package with an explicit temporary version.
+
 Install locally:
 
 ```bash
@@ -57,10 +59,10 @@ The menu bar app supports:
 
 - opening the system default Codex by clicking the first-level `Default Codex` menu item
 - opening a profile's Codex app by clicking that profile directly in the first-level menu
-- viewing today's token usage as a cached menu bar chart, refreshed in the background every 5 minutes
-- creating empty OAuth-login profiles from `Settings...` -> `Profiles`
-- importing the current default Codex profile from `Settings...` -> `Profiles`
-- creating custom API-key profiles from `Settings...` -> `Profiles`
+- viewing today's token usage as a cached menu bar chart, refreshed in the background at launch and every 30 minutes
+- creating empty OAuth-login profiles from `Settings...` -> `Profiles` -> `Add Profile`
+- importing the current default Codex profile from `Settings...` -> `Profiles` -> `Add Profile`
+- creating custom API-key profiles from `Settings...` -> `Profiles` -> `Add Profile`
 - removing profile registry entries from `Settings...` -> `Profiles`
 - opening the managed profiles folder from the menu
 - enabling or disabling launch at login from `Settings...` -> `General`
@@ -70,7 +72,7 @@ For the first local version, custom API keys are stored in `~/.codex-profiles/pr
 
 `Remove Profile` only removes the profile from `profiles.json`. It does not delete that profile's `codex-home`, `electron-user-data`, or `logs` directories from disk.
 
-Usage statistics are read from each profile's `codex-home/sessions` and `codex-home/archived_sessions` logs, plus the system default `~/.codex` logs. CodexN records the latest totals in `~/.codex-profiles/usage-cache.json`; the menu only reads that cache and does not estimate cost.
+Usage statistics are read from each profile's `codex-home/sessions` and `codex-home/archived_sessions` logs, plus the system default `~/.codex` logs. The scanner targets the current day's partitioned logs and recently modified active sessions, then records the latest totals in `~/.codex-profiles/usage-cache.json`; the menu only reads that cache and does not estimate cost.
 
 ## Development
 
