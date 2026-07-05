@@ -14,6 +14,12 @@ struct TestRunner {
         try readsLegacyProfileRegistry()
         try buildsDefaultLaunchCommandsWithoutProfileIsolation()
         try stripsCodexEnvironmentWhenLaunchingDefaultApp()
+        try resolvesFocusedManagedProfileFromCodexHomeEnvironment()
+        try resolvesFocusedManagedProfileFromElectronUserDataEnvironment()
+        try resolvesFocusedManagedProfileFromUserDataDirArgument()
+        try resolvesDefaultCodexForCodexAppWithoutProfileMatch()
+        try ignoresNonCodexForegroundApps()
+        try formatsFocusedProfileMenuTitles()
         try scansTodayUsageFromCodexHomes()
         try scansRecentlyModifiedOlderCodexSessionPartitionsOnly()
         try writesAndReadsUsageCache()
@@ -244,6 +250,88 @@ struct TestRunner {
         try expect(environment["CODEX_INTERNAL_ORIGINATOR_OVERRIDE"] == nil, "default launch should remove Codex internal env")
         try expect(environment["CODEXN_API_KEY_ZL_ABC"] == nil, "default launch should remove CodexN API key env")
         try expect(environment["CODEXN_ROOT"] == nil, "default launch should remove CodexN root env")
+    }
+
+    private static func resolvesFocusedManagedProfileFromCodexHomeEnvironment() throws {
+        let root = try temporaryDirectory()
+        let store = ProfileStore(root: root)
+        let profile = try store.createProfile(id: "work", name: "Work")
+        let snapshot = codexProcessSnapshot(environment: ["CODEX_HOME": profile.codexHome.path])
+
+        let label = FocusedCodexProfileResolver.resolve(snapshot: snapshot, profiles: [profile])
+
+        try expect(label == .profile(id: "work"), "CODEX_HOME should identify the focused profile")
+    }
+
+    private static func resolvesFocusedManagedProfileFromElectronUserDataEnvironment() throws {
+        let root = try temporaryDirectory()
+        let store = ProfileStore(root: root)
+        let profile = try store.createProfile(id: "personal", name: "Personal")
+        let snapshot = codexProcessSnapshot(environment: ["CODEX_ELECTRON_USER_DATA_PATH": profile.electronUserData.path])
+
+        let label = FocusedCodexProfileResolver.resolve(snapshot: snapshot, profiles: [profile])
+
+        try expect(label == .profile(id: "personal"), "CODEX_ELECTRON_USER_DATA_PATH should identify the focused profile")
+    }
+
+    private static func resolvesFocusedManagedProfileFromUserDataDirArgument() throws {
+        let root = try temporaryDirectory()
+        let store = ProfileStore(root: root)
+        let profile = try store.createProfile(id: "zl", name: "ZL")
+        let snapshot = codexProcessSnapshot(arguments: ["--user-data-dir=\(profile.electronUserData.path)"])
+
+        let label = FocusedCodexProfileResolver.resolve(snapshot: snapshot, profiles: [profile])
+
+        try expect(label == .profile(id: "zl"), "--user-data-dir should identify the focused profile")
+    }
+
+    private static func resolvesDefaultCodexForCodexAppWithoutProfileMatch() throws {
+        let root = try temporaryDirectory()
+        let store = ProfileStore(root: root)
+        let profile = try store.createProfile(id: "work", name: "Work")
+        let snapshot = codexProcessSnapshot(arguments: ["--user-data-dir=/tmp/elsewhere"])
+
+        let label = FocusedCodexProfileResolver.resolve(snapshot: snapshot, profiles: [profile])
+
+        try expect(label == .defaultCodex, "unmatched Codex app should be treated as Default")
+    }
+
+    private static func ignoresNonCodexForegroundApps() throws {
+        let root = try temporaryDirectory()
+        let store = ProfileStore(root: root)
+        let profile = try store.createProfile(id: "work", name: "Work")
+        let snapshot = FocusedCodexProcessSnapshot(
+            pid: 42,
+            bundleIdentifier: "com.apple.Terminal",
+            localizedName: "Terminal",
+            executablePath: "/System/Applications/Utilities/Terminal.app/Contents/MacOS/Terminal",
+            arguments: ["zsh"],
+            environment: ["CODEX_HOME": profile.codexHome.path]
+        )
+
+        let label = FocusedCodexProfileResolver.resolve(snapshot: snapshot, profiles: [profile])
+
+        try expect(label == .none, "non-Codex apps should not update the menu bar profile label")
+    }
+
+    private static func formatsFocusedProfileMenuTitles() throws {
+        try expect(FocusedCodexProfileResolver.menuBarTitle(for: .none) == "CodexN", "none title should be plain")
+        try expect(FocusedCodexProfileResolver.menuBarTitle(for: .defaultCodex) == "CodexN | Default", "default title should be labeled")
+        try expect(FocusedCodexProfileResolver.menuBarTitle(for: .profile(id: "work")) == "CodexN | work", "profile title should include id")
+    }
+
+    private static func codexProcessSnapshot(
+        arguments: [String] = [],
+        environment: [String: String] = [:]
+    ) -> FocusedCodexProcessSnapshot {
+        FocusedCodexProcessSnapshot(
+            pid: 42,
+            bundleIdentifier: "com.openai.codex",
+            localizedName: "Codex",
+            executablePath: "/Applications/Codex.app/Contents/MacOS/Codex",
+            arguments: arguments,
+            environment: environment
+        )
     }
 
     private static func scansTodayUsageFromCodexHomes() throws {
