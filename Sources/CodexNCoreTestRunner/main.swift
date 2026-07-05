@@ -31,6 +31,7 @@ struct TestRunner {
         try parsesKernelProcessArgumentsAndEnvironment()
         try scansTodayUsageFromCodexHomes()
         try scansRecentlyModifiedOlderCodexSessionPartitionsOnly()
+        try computesUsageListBarWidths()
         try writesAndReadsUsageCache()
         print("CodexNCoreTestRunner: all tests passed")
     }
@@ -592,6 +593,21 @@ struct TestRunner {
 
         try expect(snapshot.totalTokens == 14, "recently modified older partitions should be scanned without full recursion")
         try expect(snapshot.profiles[0].inputTokens == 11, "stale older partitions should not contribute")
+    }
+
+    private static func computesUsageListBarWidths() throws {
+        try expect(
+            TokenUsageChartLayout.horizontalBarWidth(tokens: 0, maxTokens: 100, availableWidth: 120, minVisibleWidth: 6) == 0,
+            "zero usage should not show a usage list bar"
+        )
+        try expect(
+            TokenUsageChartLayout.horizontalBarWidth(tokens: 100, maxTokens: 100, availableWidth: 120, minVisibleWidth: 6) == 120,
+            "max usage should fill usage list bar width"
+        )
+        try expect(
+            TokenUsageChartLayout.horizontalBarWidth(tokens: 1, maxTokens: 100, availableWidth: 120, minVisibleWidth: 6) == 6,
+            "nonzero tiny usage should keep a minimum visible usage list bar"
+        )
     }
 
     private static func writesAndReadsUsageCache() throws {

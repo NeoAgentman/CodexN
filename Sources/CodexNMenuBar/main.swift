@@ -407,7 +407,11 @@ private struct TokenUsageMenuChart: View {
     @State private var hoverTooltip: TokenUsageHoverTooltip?
 
     private let width: CGFloat = 300
-    private let chartHeight: CGFloat = 76
+    private let usageValueWidth: CGFloat = 58
+    private let usageBarHeight: CGFloat = 8
+    private let usageRowHeight: CGFloat = 18
+    private let usageRowSpacing: CGFloat = 7
+    private let usageBarMinVisibleWidth: CGFloat = 6
     private let hoverIDMaxLength = 24
     private let colors: [Color] = [
         Color(red: 0.26, green: 0.55, blue: 0.96),
@@ -419,26 +423,26 @@ private struct TokenUsageMenuChart: View {
     ]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .firstTextBaseline) {
-                Text("Token Usage")
-                    .font(.caption.weight(.semibold))
-                Spacer()
-                Text(totalLabel)
-                    .font(.caption.monospacedDigit().weight(.medium))
-                    .foregroundStyle(.secondary)
-            }
+        VStack(alignment: .leading, spacing: 7) {
+            Text("Token Usage")
+                .font(.caption.weight(.semibold))
 
             if let snapshot {
+                HStack(alignment: .firstTextBaseline, spacing: 10) {
+                    Text(totalLabel)
+                        .font(.caption.monospacedDigit().weight(.medium))
+                        .foregroundStyle(.secondary)
+                    Text("Updated \(Self.timeString(snapshot.generatedAt))")
+                        .font(.caption2)
+                        .foregroundStyle(Color(nsColor: .tertiaryLabelColor))
+                    Spacer(minLength: 0)
+                }
+
                 if snapshot.profiles.isEmpty {
                     emptyState("No usage data today")
                 } else {
-                    chart(for: snapshot.profiles)
+                    usageList(for: snapshot.profiles)
                 }
-
-                Text("Updated \(Self.timeString(snapshot.generatedAt))")
-                    .font(.caption2)
-                    .foregroundStyle(Color(nsColor: .tertiaryLabelColor))
             } else {
                 emptyState("Usage data is updating")
             }
@@ -460,88 +464,93 @@ private struct TokenUsageMenuChart: View {
             .frame(maxWidth: .infinity, minHeight: 34, alignment: .leading)
     }
 
-    private func chart(for profiles: [CodexUsageProfileSnapshot]) -> some View {
+    private func usageList(for profiles: [CodexUsageProfileSnapshot]) -> some View {
         let maxTokens = max(profiles.map(\.totalTokens).max() ?? 0, 1)
-        let spacing: CGFloat = profiles.count > 6 ? 5 : 8
         let availableWidth = width - 24
-        let barWidth = max(10, min(26, (availableWidth - CGFloat(max(0, profiles.count - 1)) * spacing) / CGFloat(max(1, profiles.count))))
-        let columnWidth = max(32, barWidth + 12)
-        let contentWidth = CGFloat(profiles.count) * columnWidth + CGFloat(max(0, profiles.count - 1)) * spacing
-        let contentStartX = max(0, (availableWidth - contentWidth) / 2)
+        let barAvailableWidth = max(1, availableWidth - usageValueWidth - 10)
+        let listHeight = CGFloat(profiles.count) * usageRowHeight + CGFloat(max(0, profiles.count - 1)) * usageRowSpacing
 
         return ZStack(alignment: .topLeading) {
-            HStack(alignment: .bottom, spacing: spacing) {
+            VStack(alignment: .leading, spacing: usageRowSpacing) {
                 ForEach(Array(profiles.enumerated()), id: \.element.id) { index, profile in
-                    VStack(spacing: 5) {
+                    HStack(spacing: 10) {
                         Text(Self.shortTokenString(profile.totalTokens))
                             .font(.caption2.monospacedDigit())
                             .foregroundStyle(.secondary)
                             .lineLimit(1)
                             .minimumScaleFactor(0.7)
-                            .frame(width: max(28, barWidth + 8))
+                            .frame(width: usageValueWidth, alignment: .trailing)
 
-                        RoundedRectangle(cornerRadius: 3, style: .continuous)
-                            .fill(colors[index % colors.count].gradient)
-                            .frame(
-                                width: barWidth,
-                                height: barHeight(tokens: profile.totalTokens, maxTokens: maxTokens)
-                            )
-                            .shadow(
-                                color: colors[index % colors.count].opacity(hoverTooltip?.profileID == profile.id ? 0.32 : 0),
-                                radius: 4,
-                                y: 1
-                            )
-                            .frame(width: columnWidth, height: 52, alignment: .bottom)
-                            .accessibilityLabel(profile.name)
-                            .accessibilityValue(Self.tokenString(profile.totalTokens))
+                        ZStack(alignment: .leading) {
+                            if profile.totalTokens > 0 {
+                                RoundedRectangle(cornerRadius: 4, style: .continuous)
+                                    .fill(colors[index % colors.count].gradient)
+                                    .frame(
+                                        width: usageBarWidth(
+                                            tokens: profile.totalTokens,
+                                            maxTokens: maxTokens,
+                                            availableWidth: barAvailableWidth
+                                        ),
+                                        height: usageBarHeight
+                                    )
+                                    .shadow(
+                                        color: colors[index % colors.count].opacity(hoverTooltip?.profileID == profile.id ? 0.32 : 0),
+                                        radius: 4,
+                                        y: 1
+                                    )
+                            }
+                        }
+                        .frame(width: barAvailableWidth, height: usageRowHeight, alignment: .leading)
+                        .accessibilityLabel(profile.name)
+                        .accessibilityValue(Self.tokenString(profile.totalTokens))
                     }
-                    .frame(maxHeight: .infinity, alignment: .bottom)
+                    .frame(width: availableWidth, height: usageRowHeight, alignment: .leading)
                 }
             }
-            .frame(width: availableWidth, height: chartHeight, alignment: .bottom)
+            .frame(width: availableWidth, height: listHeight, alignment: .leading)
 
             TokenUsageMouseTrackingView { location in
-                hoverTooltip = tooltip(at: location, profiles: profiles, columnWidth: columnWidth, spacing: spacing, contentStartX: contentStartX)
+                hoverTooltip = usageListTooltip(at: location, profiles: profiles)
             } onExit: {
                 hoverTooltip = nil
             }
-            .frame(width: availableWidth, height: chartHeight)
+            .frame(width: availableWidth, height: listHeight)
 
             if let hoverTooltip {
                 hoverTooltipView(hoverTooltip)
                     .offset(
                         x: tooltipX(for: hoverTooltip, availableWidth: availableWidth),
-                        y: tooltipY(for: hoverTooltip.location)
+                        y: tooltipY(for: hoverTooltip.location, containerHeight: listHeight)
                     )
                     .zIndex(2)
                     .allowsHitTesting(false)
             }
         }
-        .frame(width: availableWidth, height: chartHeight, alignment: .center)
-        .frame(maxWidth: .infinity, minHeight: chartHeight, maxHeight: chartHeight, alignment: .center)
+        .frame(width: availableWidth, height: listHeight, alignment: .leading)
+        .frame(maxWidth: .infinity, minHeight: listHeight, maxHeight: listHeight, alignment: .leading)
     }
 
-    private func barHeight(tokens: UInt64, maxTokens: UInt64) -> CGFloat {
-        guard tokens > 0 else { return 2 }
-        let ratio = Double(tokens) / Double(maxTokens)
-        return max(6, CGFloat(ratio) * 48)
+    private func usageBarWidth(tokens: UInt64, maxTokens: UInt64, availableWidth: CGFloat) -> CGFloat {
+        CGFloat(
+            TokenUsageChartLayout.horizontalBarWidth(
+                tokens: tokens,
+                maxTokens: maxTokens,
+                availableWidth: Double(availableWidth),
+                minVisibleWidth: Double(usageBarMinVisibleWidth)
+            )
+        )
     }
 
-    private func tooltip(
+    private func usageListTooltip(
         at location: CGPoint,
-        profiles: [CodexUsageProfileSnapshot],
-        columnWidth: CGFloat,
-        spacing: CGFloat,
-        contentStartX: CGFloat
+        profiles: [CodexUsageProfileSnapshot]
     ) -> TokenUsageHoverTooltip? {
-        guard location.x >= contentStartX else { return nil }
-        let relativeX = location.x - contentStartX
-        let stride = columnWidth + spacing
+        let stride = usageRowHeight + usageRowSpacing
         guard stride > 0 else { return nil }
-        let index = Int(relativeX / stride)
+        let index = Int(location.y / stride)
         guard profiles.indices.contains(index) else { return nil }
-        let columnX = CGFloat(index) * stride
-        guard relativeX >= columnX, relativeX <= columnX + columnWidth else { return nil }
+        let rowY = CGFloat(index) * stride
+        guard location.y >= rowY, location.y <= rowY + usageRowHeight else { return nil }
         let profile = profiles[index]
         return TokenUsageHoverTooltip(profileID: profile.id, location: location)
     }
@@ -567,8 +576,8 @@ private struct TokenUsageMenuChart: View {
         return max(0, min(tooltip.location.x + 12, availableWidth - width))
     }
 
-    private func tooltipY(for location: CGPoint) -> CGFloat {
-        max(0, min(location.y - 10, chartHeight - 26))
+    private func tooltipY(for location: CGPoint, containerHeight: CGFloat) -> CGFloat {
+        max(0, min(location.y - 10, containerHeight - 26))
     }
 
     private func truncatedHoverID(_ value: String) -> String {
