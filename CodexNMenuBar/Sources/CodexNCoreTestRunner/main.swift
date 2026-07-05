@@ -20,6 +20,7 @@ struct TestRunner {
         try resolvesDefaultCodexForCodexAppWithoutProfileMatch()
         try ignoresNonCodexForegroundApps()
         try formatsFocusedProfileMenuTitles()
+        try parsesKernelProcessArgumentsAndEnvironment()
         try scansTodayUsageFromCodexHomes()
         try scansRecentlyModifiedOlderCodexSessionPartitionsOnly()
         try writesAndReadsUsageCache()
@@ -320,6 +321,35 @@ struct TestRunner {
         try expect(FocusedCodexProfileResolver.menuBarTitle(for: .profile(id: "work")) == "CodexN | work", "profile title should include id")
     }
 
+    private static func parsesKernelProcessArgumentsAndEnvironment() throws {
+        let data = kernelProcessArgumentsData(
+            executablePath: "/Applications/Codex.app/Contents/MacOS/Codex",
+            arguments: [
+                "/Applications/Codex.app/Contents/MacOS/Codex",
+                "--user-data-dir=/Users/example/Library/Application Support/CodexN/work"
+            ],
+            environment: [
+                "CODEX_HOME=/Users/example/.codex-profiles/work/codex-home",
+                "CODEX_ELECTRON_USER_DATA_PATH=/Users/example/Library/Application Support/CodexN/work"
+            ]
+        )
+
+        let parsed = FocusedCodexProcessArgumentsParser.parse(data)
+
+        try expect(
+            parsed.arguments.contains("--user-data-dir=/Users/example/Library/Application Support/CodexN/work"),
+            "parser should preserve spaces inside arguments"
+        )
+        try expect(
+            parsed.environment["CODEX_HOME"] == "/Users/example/.codex-profiles/work/codex-home",
+            "parser should decode CODEX_HOME"
+        )
+        try expect(
+            parsed.environment["CODEX_ELECTRON_USER_DATA_PATH"] == "/Users/example/Library/Application Support/CodexN/work",
+            "parser should decode electron user data path"
+        )
+    }
+
     private static func codexProcessSnapshot(
         arguments: [String] = [],
         environment: [String: String] = [:]
@@ -332,6 +362,27 @@ struct TestRunner {
             arguments: arguments,
             environment: environment
         )
+    }
+
+    private static func kernelProcessArgumentsData(
+        executablePath: String,
+        arguments: [String],
+        environment: [String]
+    ) -> Data {
+        var data = Data()
+        var argc = Int32(arguments.count)
+        withUnsafeBytes(of: &argc) { data.append(contentsOf: $0) }
+        appendNullTerminated(executablePath, to: &data)
+        data.append(0)
+        arguments.forEach { appendNullTerminated($0, to: &data) }
+        environment.forEach { appendNullTerminated($0, to: &data) }
+        data.append(0)
+        return data
+    }
+
+    private static func appendNullTerminated(_ value: String, to data: inout Data) {
+        data.append(value.data(using: .utf8)!)
+        data.append(0)
     }
 
     private static func scansTodayUsageFromCodexHomes() throws {
