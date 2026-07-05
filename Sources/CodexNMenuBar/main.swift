@@ -123,7 +123,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         item.attributedTitle = NSAttributedString(
             string: title,
             attributes: [
-                .foregroundColor: NSColor.controlAccentColor
+                .font: NSFont.systemFont(ofSize: NSFont.systemFontSize, weight: .semibold)
             ]
         )
         return item
