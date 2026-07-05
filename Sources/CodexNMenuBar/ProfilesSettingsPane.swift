@@ -237,4 +237,8 @@ struct ProfilesSettingsPane: View {
         apiKey = ""
         selection = .oauth
     }
+
+    private func trimmed(_ value: String) -> String {
+        value.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
 }

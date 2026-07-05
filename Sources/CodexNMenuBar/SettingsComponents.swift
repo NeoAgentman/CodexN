@@ -1,4 +1,3 @@
-import Foundation
 import SwiftUI
 
 struct SettingsIconChip: View {
@@ -37,23 +36,4 @@ struct SettingsRowLabel: View {
             }
         }
     }
-}
-
-struct SettingsSection<Content: View>: View {
-    private let content: () -> Content
-
-    init(@ViewBuilder content: @escaping () -> Content) {
-        self.content = content
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            content()
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-}
-
-func trimmed(_ value: String) -> String {
-    value.trimmingCharacters(in: .whitespacesAndNewlines)
 }

@@ -18,7 +18,7 @@ public final class ProfileStore {
 
     public static func defaultRoot(environment: [String: String] = ProcessInfo.processInfo.environment) -> URL {
         if let override = environment["CODEXN_ROOT"], !override.isEmpty {
-            return URL(filePath: expandHome(override))
+            return URL(filePath: ProfileStoreSupport.expandHome(override))
         }
         return FileManager.default.homeDirectoryForCurrentUser.appending(path: ".codex-profiles")
     }
@@ -129,7 +129,7 @@ public final class ProfileStore {
             throw ProfileStoreError.profileAlreadyExists(id)
         }
 
-        let envName = randomAPIKeyEnvName(profileID: id)
+        let envName = ProfileStoreSupport.randomAPIKeyEnvName(profileID: id)
         var profile = makeProfile(id: id, name: name ?? id)
         profile.defaultProvider = provider
         profile.apiKeyEnvName = envName
@@ -161,7 +161,7 @@ public final class ProfileStore {
         decoder.dateDecodingStrategy = .custom { decoder in
             let container = try decoder.singleValueContainer()
             let value = try container.decode(String.self)
-            if let date = parseCodexNDate(value) {
+            if let date = ProfileStoreSupport.parseCodexNDate(value) {
                 return date
             }
             throw DecodingError.dataCorruptedError(
@@ -177,7 +177,7 @@ public final class ProfileStore {
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .custom { date, encoder in
             var container = encoder.singleValueContainer()
-            try container.encode(formatCodexNDate(date))
+            try container.encode(ProfileStoreSupport.formatCodexNDate(date))
         }
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         let data = try encoder.encode(store)
