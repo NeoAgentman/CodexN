@@ -23,6 +23,8 @@ struct TestRunner {
         try ignoresNonCodexForegroundApps()
         try formatsFocusedProfileMenuTitles()
         try identifiesFocusedProfileTitleHighlightSegment()
+        try skipsProcessArgumentReadsForNonCodexApps()
+        try usesTenSecondFocusedProfileFallbackInterval()
         try parsesKernelProcessArgumentsAndEnvironment()
         try scansTodayUsageFromCodexHomes()
         try scansRecentlyModifiedOlderCodexSessionPartitionsOnly()
@@ -352,6 +354,32 @@ struct TestRunner {
         try expect(FocusedCodexProfileResolver.menuBarHighlightedSegment(for: .none) == nil, "plain title should not have highlighted text")
         try expect(FocusedCodexProfileResolver.menuBarHighlightedSegment(for: .defaultCodex) == "Default", "default title should highlight Default")
         try expect(FocusedCodexProfileResolver.menuBarHighlightedSegment(for: .profile(id: "work")) == "work", "profile title should highlight profile id")
+    }
+
+    private static func skipsProcessArgumentReadsForNonCodexApps() throws {
+        try expect(
+            !FocusedCodexProfileResolver.shouldReadProcessArguments(
+                bundleIdentifier: "com.apple.Terminal",
+                localizedName: "Terminal",
+                executablePath: "/System/Applications/Utilities/Terminal.app/Contents/MacOS/Terminal"
+            ),
+            "non-Codex apps should not require process argument reads"
+        )
+        try expect(
+            FocusedCodexProfileResolver.shouldReadProcessArguments(
+                bundleIdentifier: "com.openai.codex",
+                localizedName: "Codex",
+                executablePath: "/Applications/Codex.app/Contents/MacOS/Codex"
+            ),
+            "Codex apps should require process argument reads"
+        )
+    }
+
+    private static func usesTenSecondFocusedProfileFallbackInterval() throws {
+        try expect(
+            FocusedCodexProfileResolver.fallbackRefreshInterval == 10,
+            "focused profile fallback polling interval should be 10 seconds"
+        )
     }
 
     private static func parsesKernelProcessArgumentsAndEnvironment() throws {

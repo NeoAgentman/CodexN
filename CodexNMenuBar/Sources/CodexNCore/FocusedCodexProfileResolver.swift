@@ -34,6 +34,7 @@ public struct FocusedCodexProcessSnapshot: Equatable {
 public enum FocusedCodexProfileResolver {
     public static let profileIDEnvironmentKey = "CODEXN_PROFILE_ID"
     public static let profileIDArgumentName = "--codexn-profile-id"
+    public static let fallbackRefreshInterval: TimeInterval = 10
 
     public static func resolve(snapshot: FocusedCodexProcessSnapshot?, profiles: [Profile]) -> FocusedCodexProfileLabel {
         guard let snapshot, isCodexApp(snapshot) else { return .none }
@@ -55,6 +56,23 @@ public enum FocusedCodexProfileResolver {
         }
 
         return .defaultCodex
+    }
+
+    public static func shouldReadProcessArguments(
+        bundleIdentifier: String?,
+        localizedName: String?,
+        executablePath: String?
+    ) -> Bool {
+        isCodexApp(
+            FocusedCodexProcessSnapshot(
+                pid: 0,
+                bundleIdentifier: bundleIdentifier,
+                localizedName: localizedName,
+                executablePath: executablePath,
+                arguments: [],
+                environment: [:]
+            )
+        )
     }
 
     public static func menuBarTitle(for label: FocusedCodexProfileLabel) -> String {
