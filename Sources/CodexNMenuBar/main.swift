@@ -98,6 +98,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 menu.addItem(item)
             }
         }
+        menu.addItem(menuItem("Add Profile...", symbol: "plus", action: #selector(addProfileFromMenu)))
 
         menu.addItem(.separator())
         addUsageMenuItem(to: menu)
@@ -351,6 +352,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     @objc private func settingsFromMenu() {
         statusMenu?.cancelTracking()
         showSettingsWindow(selection: .general)
+    }
+
+    @objc private func addProfileFromMenu() {
+        statusMenu?.cancelTracking()
+        showSettingsWindow(selection: .profiles)
     }
 
     @objc private func aboutFromMenu() {
