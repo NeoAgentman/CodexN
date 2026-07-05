@@ -340,22 +340,58 @@ public struct CodexUsageScanner {
     }
 
     private func scanUsageFile(_ file: URL, date: Date, calendar: Calendar) throws -> CodexUsageTotals {
-        let data = try Data(contentsOf: file)
+        let handle = try FileHandle(forReadingFrom: file)
+        defer { try? handle.close() }
+
         var totals = CodexUsageTotals()
         var previousCumulative: CodexUsageTotals?
-        for rawLine in data.split(separator: UInt8(ascii: "\n")) {
-            let line = Data(rawLine)
-            guard line.range(of: Self.tokenCountNeedle) != nil else { continue }
-            guard let event = Self.parseTokenEvent(line) else { continue }
-            if let cumulative = event.cumulative {
-                defer { previousCumulative = cumulative }
-                guard calendar.isDate(event.timestamp, inSameDayAs: date) else { continue }
-                totals.add(event.delta ?? cumulative.subtracting(previousCumulative))
-            } else if let delta = event.delta, calendar.isDate(event.timestamp, inSameDayAs: date) {
-                totals.add(delta)
+
+        var pending = Data()
+        while let chunk = try handle.read(upToCount: Self.scanChunkSize), !chunk.isEmpty {
+            pending.append(chunk)
+            var lineStart = pending.startIndex
+            while let newlineIndex = pending[lineStart...].firstIndex(of: UInt8(ascii: "\n")) {
+                scanUsageLine(
+                    Data(pending[lineStart..<newlineIndex]),
+                    date: date,
+                    calendar: calendar,
+                    totals: &totals,
+                    previousCumulative: &previousCumulative
+                )
+                lineStart = pending.index(after: newlineIndex)
             }
+            pending.removeSubrange(pending.startIndex..<lineStart)
         }
+
+        if !pending.isEmpty {
+            scanUsageLine(
+                pending,
+                date: date,
+                calendar: calendar,
+                totals: &totals,
+                previousCumulative: &previousCumulative
+            )
+        }
+
         return totals
+    }
+
+    private func scanUsageLine(
+        _ line: Data,
+        date: Date,
+        calendar: Calendar,
+        totals: inout CodexUsageTotals,
+        previousCumulative: inout CodexUsageTotals?
+    ) {
+        guard line.range(of: Self.tokenCountNeedle) != nil else { return }
+        guard let event = Self.parseTokenEvent(line) else { return }
+        if let cumulative = event.cumulative {
+            defer { previousCumulative = cumulative }
+            guard calendar.isDate(event.timestamp, inSameDayAs: date) else { return }
+            totals.add(event.delta ?? cumulative.subtracting(previousCumulative))
+        } else if let delta = event.delta, calendar.isDate(event.timestamp, inSameDayAs: date) {
+            totals.add(delta)
+        }
     }
 
     private func isDirectory(_ url: URL) -> Bool {
@@ -371,6 +407,7 @@ public struct CodexUsageScanner {
     }
 
     private static let tokenCountNeedle = Data(#""token_count""#.utf8)
+    private static let scanChunkSize = 64 * 1024
     private static let datePartitionPaddingDays = 1
     private static let activeSessionLookbackDays = 30
     private static let recentModificationLookbackSeconds: TimeInterval = 48 * 60 * 60
