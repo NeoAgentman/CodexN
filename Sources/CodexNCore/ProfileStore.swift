@@ -1,60 +1,5 @@
 import Foundation
 
-public struct Profile: Codable, Equatable, Identifiable {
-    public let id: String
-    public var name: String
-    public var codexHome: URL
-    public var electronUserData: URL
-    public var logDir: URL
-    public var appBundle: URL
-    public var defaultProvider: String
-    public var apiKeyEnvName: String?
-    public var apiKeyValue: String?
-    public var createdAt: Date
-    public var updatedAt: Date
-}
-
-public enum ProfileStoreError: Error, CustomStringConvertible {
-    case invalidProfileID(String)
-    case profileAlreadyExists(String)
-    case profileNotFound(String)
-    case profileDirectoryNotEmpty(URL)
-    case missingSourceDirectory(URL)
-    case processFailed(String, Int32)
-    case invalidProviderID(String)
-    case emptyRequiredField(String)
-    case invalidConfigValue(String)
-    case invalidInputValue(String)
-    case invalidBaseURL(String)
-
-    public var description: String {
-        switch self {
-        case .invalidProfileID(let id):
-            return "Invalid profile id: \(id)"
-        case .profileAlreadyExists(let id):
-            return "Profile already exists: \(id)"
-        case .profileNotFound(let id):
-            return "Profile not found: \(id)"
-        case .profileDirectoryNotEmpty(let url):
-            return "Profile directory is not empty: \(url.path)"
-        case .missingSourceDirectory(let url):
-            return "Source directory does not exist: \(url.path)"
-        case .processFailed(let command, let code):
-            return "\(command) exited with code \(code)"
-        case .invalidProviderID(let id):
-            return "Invalid provider id: \(id)"
-        case .emptyRequiredField(let field):
-            return "\(field) is required"
-        case .invalidConfigValue(let field):
-            return "Invalid config value: \(field)"
-        case .invalidInputValue(let field):
-            return "Invalid \(field)"
-        case .invalidBaseURL(let value):
-            return "Invalid base URL: \(value)"
-        }
-    }
-}
-
 public final class ProfileStore {
     private struct Store: Codable {
         var version: Int
@@ -109,9 +54,9 @@ public final class ProfileStore {
 
     @discardableResult
     public func createProfile(id: String, name: String? = nil) throws -> Profile {
-        try validateProfileID(id)
+        try ProfileInputValidator.validateProfileID(id)
         if let name {
-            try validateDisplayName(name)
+            try ProfileInputValidator.validateDisplayName(name)
         }
         var store = try load()
         if store.profiles.contains(where: { $0.id == id }) {
@@ -132,9 +77,9 @@ public final class ProfileStore {
         defaultCodexHome: URL = ProfileStore.defaultCodexHome(),
         defaultElectronUserData: URL = ProfileStore.defaultElectronUserData()
     ) throws -> Profile {
-        try validateProfileID(id)
+        try ProfileInputValidator.validateProfileID(id)
         if let name {
-            try validateDisplayName(name)
+            try ProfileInputValidator.validateDisplayName(name)
         }
         var store = try load()
         if store.profiles.contains(where: { $0.id == id }) {
@@ -166,18 +111,18 @@ public final class ProfileStore {
         baseURL: String,
         apiKey: String
     ) throws -> Profile {
-        try validateProfileID(id)
-        try validateProviderID(provider)
-        try validateRequired("model", model)
-        try validateRequired("base URL", baseURL)
-        try validateRequired("API key", apiKey)
+        try ProfileInputValidator.validateProfileID(id)
+        try ProfileInputValidator.validateProviderID(provider)
+        try ProfileInputValidator.validateRequired("model", model)
+        try ProfileInputValidator.validateRequired("base URL", baseURL)
+        try ProfileInputValidator.validateRequired("API key", apiKey)
         if let name {
-            try validateDisplayName(name)
+            try ProfileInputValidator.validateDisplayName(name)
         }
-        try validateTOMLConfigValue("model", model)
-        try validateTOMLConfigValue("base URL", baseURL)
-        try validateAPIKey(apiKey)
-        try validateBaseURL(baseURL)
+        try ProfileInputValidator.validateTOMLConfigValue("model", model)
+        try ProfileInputValidator.validateTOMLConfigValue("base URL", baseURL)
+        try ProfileInputValidator.validateAPIKey(apiKey)
+        try ProfileInputValidator.validateBaseURL(baseURL)
 
         var store = try load()
         if store.profiles.contains(where: { $0.id == id }) {
@@ -192,7 +137,7 @@ public final class ProfileStore {
 
         try assertProfileRootAvailable(profile)
         try materialize(profile)
-        try writeAPIKeyConfig(profile: profile, provider: provider, model: model, baseURL: baseURL, envName: envName)
+        try CodexConfigWriter.writeAPIKeyConfig(profile: profile, provider: provider, model: model, baseURL: baseURL, envName: envName)
         store.profiles.append(profile)
         try save(store)
         return profile
@@ -274,73 +219,6 @@ public final class ProfileStore {
         }
     }
 
-    private func validateProfileID(_ id: String) throws {
-        let pattern = #"^[A-Za-z0-9_-]+$"#
-        if id.range(of: pattern, options: .regularExpression) == nil {
-            throw ProfileStoreError.invalidProfileID(id)
-        }
-    }
-
-    private func validateProviderID(_ id: String) throws {
-        let pattern = #"^[A-Za-z0-9_-]+$"#
-        if id.range(of: pattern, options: .regularExpression) == nil {
-            throw ProfileStoreError.invalidProviderID(id)
-        }
-    }
-
-    private func validateRequired(_ field: String, _ value: String) throws {
-        if value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            throw ProfileStoreError.emptyRequiredField(field)
-        }
-    }
-
-    private func validateTOMLConfigValue(_ field: String, _ value: String) throws {
-        if value.unicodeScalars.contains(where: { $0.value < 0x20 || $0.value == 0x7F }) {
-            throw ProfileStoreError.invalidConfigValue(field)
-        }
-    }
-
-    private func validateDisplayName(_ value: String) throws {
-        if value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || containsControlCharacter(value) {
-            throw ProfileStoreError.invalidInputValue("display name")
-        }
-    }
-
-    private func validateAPIKey(_ value: String) throws {
-        if containsControlCharacter(value) {
-            throw ProfileStoreError.invalidInputValue("API key")
-        }
-    }
-
-    private func validateBaseURL(_ value: String) throws {
-        guard let components = URLComponents(string: value),
-              let scheme = components.scheme?.lowercased(),
-              ["http", "https"].contains(scheme),
-              components.host?.isEmpty == false
-        else {
-            throw ProfileStoreError.invalidBaseURL(value)
-        }
-    }
-
-    private func containsControlCharacter(_ value: String) -> Bool {
-        value.unicodeScalars.contains { $0.value < 0x20 || $0.value == 0x7F }
-    }
-
-    private func writeAPIKeyConfig(profile: Profile, provider: String, model: String, baseURL: String, envName: String) throws {
-        let config = """
-        model = "\(tomlString(model))"
-        model_provider = "\(tomlString(provider))"
-
-        [model_providers.\(provider)]
-        name = "\(tomlString(provider))"
-        base_url = "\(tomlString(baseURL))"
-        env_key = "\(tomlString(envName))"
-        wire_api = "responses"
-
-        """
-        try config.write(to: profile.codexHome.appending(path: "config.toml"), atomically: true, encoding: .utf8)
-    }
-
     private func secureDirectory(_ url: URL) throws {
         try fileManager.createDirectory(
             at: url,
@@ -364,53 +242,4 @@ public final class ProfileStore {
             throw ProfileStoreError.processFailed("ditto", process.terminationStatus)
         }
     }
-}
-
-private func randomAPIKeyEnvName(profileID: String) -> String {
-    let sanitized = profileID
-        .uppercased()
-        .map { character in
-            character.isLetter || character.isNumber ? character : "_"
-        }
-    let suffix = UUID().uuidString.replacingOccurrences(of: "-", with: "").prefix(12)
-    return "CODEXN_API_KEY_\(String(sanitized))_\(suffix)"
-}
-
-private func tomlString(_ value: String) -> String {
-    value
-        .replacingOccurrences(of: "\\", with: "\\\\")
-        .replacingOccurrences(of: "\"", with: "\\\"")
-}
-
-private func parseCodexNDate(_ value: String) -> Date? {
-    let fractionalFormatter = ISO8601DateFormatter()
-    fractionalFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-    fractionalFormatter.timeZone = TimeZone(secondsFromGMT: 0)
-    if let date = fractionalFormatter.date(from: value) {
-        return date
-    }
-
-    let plainFormatter = ISO8601DateFormatter()
-    plainFormatter.formatOptions = [.withInternetDateTime]
-    plainFormatter.timeZone = TimeZone(secondsFromGMT: 0)
-    return plainFormatter.date(from: value)
-}
-
-private func formatCodexNDate(_ date: Date) -> String {
-    let formatter = ISO8601DateFormatter()
-    formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-    formatter.timeZone = TimeZone(secondsFromGMT: 0)
-    return formatter.string(from: date)
-}
-
-private func expandHome(_ value: String) -> String {
-    if value == "~" {
-        return FileManager.default.homeDirectoryForCurrentUser.path
-    }
-    if value.hasPrefix("~/") {
-        return FileManager.default.homeDirectoryForCurrentUser
-            .appending(path: String(value.dropFirst(2)))
-            .path
-    }
-    return value
 }
