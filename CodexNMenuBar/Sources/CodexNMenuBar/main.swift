@@ -11,6 +11,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var statusItem: NSStatusItem?
     private var statusMenu: NSMenu?
     private var settingsWindowController: SettingsWindowController?
+    private var usageRefreshTimer: Timer?
+    private var usageRefreshTask: Task<Error?, Never>?
+
+    private static let usageRefreshInterval: TimeInterval = 5 * 60
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -24,6 +28,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         statusMenu = menu
         statusItem?.menu = menu
         rebuildMenu()
+        startUsageRefreshLoop()
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        usageRefreshTimer?.invalidate()
+        usageRefreshTask?.cancel()
     }
 
     func menuWillOpen(_ menu: NSMenu) {
@@ -139,6 +149,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
 
         let controller = SettingsWindowController(store: store, initialSelection: selection) { [weak self] in
+            self?.refreshUsageCacheInBackground()
             self?.rebuildMenu()
         }
         controller.onClose = { [weak self] in
@@ -160,6 +171,47 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     private func quit() {
         NSApp.terminate(nil)
+    }
+
+    private func startUsageRefreshLoop() {
+        refreshUsageCacheInBackground()
+        usageRefreshTimer?.invalidate()
+        usageRefreshTimer = Timer.scheduledTimer(withTimeInterval: Self.usageRefreshInterval, repeats: true) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.refreshUsageCacheInBackground()
+            }
+        }
+    }
+
+    private func refreshUsageCacheInBackground() {
+        guard usageRefreshTask == nil else { return }
+        let root = store.root
+        let task = Task.detached(priority: .utility) { () -> Error? in
+            do {
+                try Self.refreshUsageCache(root: root)
+                return nil
+            } catch {
+                return error
+            }
+        }
+        usageRefreshTask = task
+
+        Task { @MainActor [weak self] in
+            let error = await task.value
+            guard let self else { return }
+            self.usageRefreshTask = nil
+            if error == nil {
+                self.rebuildMenu()
+            }
+        }
+    }
+
+    nonisolated private static func refreshUsageCache(root: URL) throws {
+        let store = ProfileStore(root: root)
+        let managedProfiles = (try? store.listProfiles()) ?? []
+        let usageProfiles = CodexUsageScanner.usageProfiles(managedProfiles: managedProfiles)
+        let snapshot = try CodexUsageScanner().scanToday(profiles: usageProfiles)
+        try CodexUsageCacheStore(root: root).write(snapshot)
     }
 
     @objc private func settingsFromMenu() {
