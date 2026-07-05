@@ -305,6 +305,7 @@ private struct TokenUsageMenuChart: View {
 
     private let width: CGFloat = 300
     private let chartHeight: CGFloat = 76
+    private let hoverIDMaxLength = 24
     private let colors: [Color] = [
         Color(red: 0.26, green: 0.55, blue: 0.96),
         Color(red: 0.46, green: 0.72, blue: 0.38),
@@ -406,7 +407,7 @@ private struct TokenUsageMenuChart: View {
             if let hoverTooltip {
                 hoverTooltipView(hoverTooltip)
                     .offset(
-                        x: tooltipX(for: hoverTooltip.location, availableWidth: availableWidth),
+                        x: tooltipX(for: hoverTooltip, availableWidth: availableWidth),
                         y: tooltipY(for: hoverTooltip.location)
                     )
                     .zIndex(2)
@@ -443,14 +444,13 @@ private struct TokenUsageMenuChart: View {
     }
 
     private func hoverTooltipView(_ tooltip: TokenUsageHoverTooltip) -> some View {
-        Text(tooltip.profileID)
+        Text(truncatedHoverID(tooltip.profileID))
             .font(.caption2.weight(.medium))
             .foregroundStyle(.primary)
             .lineLimit(1)
-            .truncationMode(.tail)
             .padding(.horizontal, 7)
             .padding(.vertical, 4)
-            .frame(maxWidth: 128)
+            .fixedSize(horizontal: true, vertical: false)
             .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 5, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 5, style: .continuous)
@@ -459,12 +459,22 @@ private struct TokenUsageMenuChart: View {
             .shadow(color: .black.opacity(0.16), radius: 5, y: 2)
     }
 
-    private func tooltipX(for location: CGPoint, availableWidth: CGFloat) -> CGFloat {
-        max(0, min(location.x + 12, availableWidth - 128))
+    private func tooltipX(for tooltip: TokenUsageHoverTooltip, availableWidth: CGFloat) -> CGFloat {
+        let width = estimatedTooltipWidth(for: truncatedHoverID(tooltip.profileID))
+        return max(0, min(tooltip.location.x + 12, availableWidth - width))
     }
 
     private func tooltipY(for location: CGPoint) -> CGFloat {
         max(0, min(location.y - 10, chartHeight - 26))
+    }
+
+    private func truncatedHoverID(_ value: String) -> String {
+        guard value.count > hoverIDMaxLength else { return value }
+        return "\(value.prefix(max(0, hoverIDMaxLength - 3)))..."
+    }
+
+    private func estimatedTooltipWidth(for value: String) -> CGFloat {
+        min(180, CGFloat(value.count) * 7 + 14)
     }
 
     private static func shortTokenString(_ value: UInt64) -> String {
