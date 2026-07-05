@@ -38,24 +38,23 @@ CodexN uses the explicit profile id to update its menu bar title when a Codex wi
 
 ## Menu Bar App
 
-The native app lives in `CodexNMenuBar` and does not depend on Node.js.
+The native app is implemented in Swift and does not depend on Node.js.
 
 Build and package:
 
 ```bash
-cd CodexNMenuBar
 swift run CodexNCoreTestRunner
 swift build --product CodexNMenuBar
 scripts/package-app.sh
 open CodexN.app
 ```
 
-`scripts/package-app.sh` automatically increments the patch version in `CodexNMenuBar/VERSION` each time it packages the app. Use `CODEXN_AUTO_BUMP_VERSION=0 scripts/package-app.sh` to package without changing `VERSION`, or `CODEXN_VERSION=0.1.99 scripts/package-app.sh` to package with an explicit temporary version.
+`scripts/package-app.sh` automatically increments the patch version in `VERSION` each time it packages the app. Use `CODEXN_AUTO_BUMP_VERSION=0 scripts/package-app.sh` to package without changing `VERSION`, or `CODEXN_VERSION=0.1.99 scripts/package-app.sh` to package with an explicit temporary version.
 
 Install locally:
 
 ```bash
-ditto CodexNMenuBar/CodexN.app /Applications/CodexN.app
+ditto CodexN.app /Applications/CodexN.app
 ```
 
 The menu bar app supports:
@@ -74,6 +73,8 @@ The menu bar app supports:
 
 For the first local version, custom API keys are stored in `~/.codex-profiles/profiles.json`. The generated `config.toml` stores only a random `env_key`; CodexN injects the matching API key into the child process environment when launching that profile.
 
+Set `CODEXN_ROOT` before launching the app executable if you need a different profile root.
+
 `Remove Profile` only removes the profile from `profiles.json`. It does not delete that profile's `codex-home`, `electron-user-data`, or `logs` directories from disk.
 
 Usage statistics are read from each profile's `codex-home/sessions` and `codex-home/archived_sessions` logs, plus the system default `~/.codex` logs. The scanner targets the current day's partitioned logs and recently modified active sessions, then records the latest totals in `~/.codex-profiles/usage-cache.json`; the menu only reads that cache and does not estimate cost.
@@ -83,7 +84,6 @@ Usage statistics are read from each profile's `codex-home/sessions` and `codex-h
 Run Swift checks:
 
 ```bash
-cd CodexNMenuBar
 swift run CodexNCoreTestRunner
 swift build --product CodexNMenuBar
 ```
