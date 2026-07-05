@@ -479,7 +479,7 @@ private struct TokenUsageMenuChart: View {
             if let snapshot {
                 HStack(alignment: .firstTextBaseline, spacing: 10) {
                     Text(totalLabel)
-                        .font(.caption.monospacedDigit().weight(.medium))
+                        .font(.caption.monospacedDigit().weight(.bold))
                         .foregroundStyle(.secondary)
                     Text("Updated \(Self.timeString(snapshot.generatedAt))")
                         .font(.caption2)
