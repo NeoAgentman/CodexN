@@ -15,6 +15,7 @@ struct TestRunner {
         try buildsDefaultLaunchCommandsWithoutProfileIsolation()
         try stripsCodexEnvironmentWhenLaunchingDefaultApp()
         try scansTodayUsageFromCodexHomes()
+        try scansRecentlyModifiedOlderCodexSessionPartitionsOnly()
         try writesAndReadsUsageCache()
         print("CodexNCoreTestRunner: all tests passed")
     }
@@ -284,6 +285,42 @@ struct TestRunner {
         try expect(snapshot.profiles.count == 1, "should include one profile")
         try expect(snapshot.profiles[0].totalTokens == 79, "profile total should be 79")
         try expect(snapshot.profiles[0].cachedInputTokens == 13, "cached input should add delta and last usage")
+    }
+
+    private static func scansRecentlyModifiedOlderCodexSessionPartitionsOnly() throws {
+        let root = try temporaryDirectory()
+        let codexHome = root.appending(path: "work/codex-home")
+        let sessions = codexHome.appending(path: "sessions")
+
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let today = calendar.date(from: DateComponents(year: 2027, month: 3, day: 11, hour: 12))!
+        let recentlyModified = calendar.date(byAdding: .hour, value: -12, to: today)!
+        let staleModified = calendar.date(byAdding: .day, value: -10, to: today)!
+
+        let activeOldPartition = sessions.appending(path: "2027/03/01")
+        let staleOldPartition = sessions.appending(path: "2027/03/02")
+        try FileManager.default.createDirectory(at: activeOldPartition, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: staleOldPartition, withIntermediateDirectories: true)
+
+        let activeFile = activeOldPartition.appending(path: "rollout-2027-03-01T09-00-00-active.jsonl")
+        let staleFile = staleOldPartition.appending(path: "rollout-2027-03-02T09-00-00-stale.jsonl")
+        try tokenLine(timestamp: today, last: usage(input: 11, cached: 2, output: 3, total: 14))
+            .write(to: activeFile, atomically: true, encoding: .utf8)
+        try tokenLine(timestamp: today, last: usage(input: 999, cached: 0, output: 1, total: 1_000))
+            .write(to: staleFile, atomically: true, encoding: .utf8)
+        try FileManager.default.setAttributes([.modificationDate: recentlyModified], ofItemAtPath: activeFile.path)
+        try FileManager.default.setAttributes([.modificationDate: staleModified], ofItemAtPath: staleFile.path)
+
+        let scanner = CodexUsageScanner()
+        let snapshot = try scanner.scanToday(
+            profiles: [CodexUsageProfile(id: "work", name: "Work", codexHome: codexHome)],
+            date: today,
+            calendar: calendar
+        )
+
+        try expect(snapshot.totalTokens == 14, "recently modified older partitions should be scanned without full recursion")
+        try expect(snapshot.profiles[0].inputTokens == 11, "stale older partitions should not contribute")
     }
 
     private static func writesAndReadsUsageCache() throws {
