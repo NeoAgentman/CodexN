@@ -15,12 +15,14 @@ struct TestRunner {
         try buildsDefaultLaunchCommandsWithoutProfileIsolation()
         try stripsCodexEnvironmentWhenLaunchingDefaultApp()
         try resolvesFocusedManagedProfileFromExplicitProfileEnvironment()
+        try resolvesFocusedManagedProfileFromExplicitProfileArgument()
         try resolvesFocusedManagedProfileFromCodexHomeEnvironment()
         try resolvesFocusedManagedProfileFromElectronUserDataEnvironment()
         try resolvesFocusedManagedProfileFromUserDataDirArgument()
         try resolvesDefaultCodexForCodexAppWithoutProfileMatch()
         try ignoresNonCodexForegroundApps()
         try formatsFocusedProfileMenuTitles()
+        try identifiesFocusedProfileTitleHighlightSegment()
         try parsesKernelProcessArgumentsAndEnvironment()
         try scansTodayUsageFromCodexHomes()
         try scansRecentlyModifiedOlderCodexSessionPartitionsOnly()
@@ -165,6 +167,10 @@ struct TestRunner {
             desktopArguments.contains("CODEXN_PROFILE_ID=work"),
             "desktop args should include explicit CodexN profile id"
         )
+        try expect(
+            desktopArguments.contains("--codexn-profile-id=work"),
+            "desktop args should include explicit CodexN profile id argument"
+        )
         try expect(desktopArguments.contains("CODEX_HOME=\(profile.codexHome.path)"), "desktop args should include CODEX_HOME")
         try expect(
             desktopArguments.contains("CODEX_ELECTRON_USER_DATA_PATH=\(profile.electronUserData.path)"),
@@ -266,6 +272,14 @@ struct TestRunner {
         try expect(label == .profile(id: "work"), "explicit CodexN profile id should identify the focused profile")
     }
 
+    private static func resolvesFocusedManagedProfileFromExplicitProfileArgument() throws {
+        let snapshot = codexProcessSnapshot(arguments: ["--codexn-profile-id=work"])
+
+        let label = FocusedCodexProfileResolver.resolve(snapshot: snapshot, profiles: [])
+
+        try expect(label == .profile(id: "work"), "explicit CodexN profile id argument should identify the focused profile")
+    }
+
     private static func resolvesFocusedManagedProfileFromCodexHomeEnvironment() throws {
         let root = try temporaryDirectory()
         let store = ProfileStore(root: root)
@@ -332,6 +346,12 @@ struct TestRunner {
         try expect(FocusedCodexProfileResolver.menuBarTitle(for: .none) == "CodexN", "none title should be plain")
         try expect(FocusedCodexProfileResolver.menuBarTitle(for: .defaultCodex) == "CodexN | Default", "default title should be labeled")
         try expect(FocusedCodexProfileResolver.menuBarTitle(for: .profile(id: "work")) == "CodexN | work", "profile title should include id")
+    }
+
+    private static func identifiesFocusedProfileTitleHighlightSegment() throws {
+        try expect(FocusedCodexProfileResolver.menuBarHighlightedSegment(for: .none) == nil, "plain title should not have highlighted text")
+        try expect(FocusedCodexProfileResolver.menuBarHighlightedSegment(for: .defaultCodex) == "Default", "default title should highlight Default")
+        try expect(FocusedCodexProfileResolver.menuBarHighlightedSegment(for: .profile(id: "work")) == "work", "profile title should highlight profile id")
     }
 
     private static func parsesKernelProcessArgumentsAndEnvironment() throws {

@@ -28,7 +28,8 @@ public struct Launcher {
         }
         arguments.append(contentsOf: [
             "--args",
-            "--user-data-dir=\(profile.electronUserData.path)"
+            "--user-data-dir=\(profile.electronUserData.path)",
+            "\(FocusedCodexProfileResolver.profileIDArgumentName)=\(profile.id)"
         ])
         if let project {
             arguments.append(project.path)

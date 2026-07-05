@@ -33,9 +33,14 @@ public struct FocusedCodexProcessSnapshot: Equatable {
 
 public enum FocusedCodexProfileResolver {
     public static let profileIDEnvironmentKey = "CODEXN_PROFILE_ID"
+    public static let profileIDArgumentName = "--codexn-profile-id"
 
     public static func resolve(snapshot: FocusedCodexProcessSnapshot?, profiles: [Profile]) -> FocusedCodexProfileLabel {
         guard let snapshot, isCodexApp(snapshot) else { return .none }
+
+        if let profileID = explicitProfileIDArgument(snapshot.arguments) {
+            return .profile(id: profileID)
+        }
 
         if let profileID = snapshot.environment[profileIDEnvironmentKey]?.trimmingCharacters(in: .whitespacesAndNewlines),
            !profileID.isEmpty {
@@ -60,6 +65,17 @@ public enum FocusedCodexProfileResolver {
             "CodexN | Default"
         case .profile(let id):
             "CodexN | \(id)"
+        }
+    }
+
+    public static func menuBarHighlightedSegment(for label: FocusedCodexProfileLabel) -> String? {
+        switch label {
+        case .none:
+            nil
+        case .defaultCodex:
+            "Default"
+        case .profile(let id):
+            id
         }
     }
 
@@ -111,6 +127,25 @@ public enum FocusedCodexProfileResolver {
             }
         }
         return values
+    }
+
+    private static func explicitProfileIDArgument(_ arguments: [String]) -> String? {
+        var iterator = arguments.makeIterator()
+        while let argument = iterator.next() {
+            if argument == profileIDArgumentName,
+               let value = iterator.next()?.trimmingCharacters(in: .whitespacesAndNewlines),
+               !value.isEmpty {
+                return value
+            }
+            let prefix = "\(profileIDArgumentName)="
+            if argument.hasPrefix(prefix) {
+                let value = String(argument.dropFirst(prefix.count)).trimmingCharacters(in: .whitespacesAndNewlines)
+                if !value.isEmpty {
+                    return value
+                }
+            }
+        }
+        return nil
     }
 
     private static func pathMatches(_ lhs: String, _ rhs: String) -> Bool {
