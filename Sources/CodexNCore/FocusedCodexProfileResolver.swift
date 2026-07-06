@@ -31,6 +31,22 @@ public struct FocusedCodexProcessSnapshot: Equatable {
     }
 }
 
+public struct RunningCodexProcessSnapshot: Equatable {
+    public let process: FocusedCodexProcessSnapshot
+    public let hasVisibleWindow: Bool
+
+    public init(process: FocusedCodexProcessSnapshot, hasVisibleWindow: Bool) {
+        self.process = process
+        self.hasVisibleWindow = hasVisibleWindow
+    }
+}
+
+public enum CodexAppActivationPlan: Equatable {
+    case launch
+    case activate(pid: Int32)
+    case reopen(pid: Int32)
+}
+
 public enum FocusedCodexProfileResolver {
     public static let profileIDEnvironmentKey = "CODEXN_PROFILE_ID"
     public static let profileIDArgumentName = "--codexn-profile-id"
@@ -56,6 +72,28 @@ public enum FocusedCodexProfileResolver {
         }
 
         return .defaultCodex
+    }
+
+    public static func matchingCodexProcessSnapshot(
+        for target: FocusedCodexProfileLabel,
+        snapshots: [FocusedCodexProcessSnapshot],
+        profiles: [Profile]
+    ) -> FocusedCodexProcessSnapshot? {
+        guard target != .none else { return nil }
+        return snapshots.first { resolve(snapshot: $0, profiles: profiles) == target }
+    }
+
+    public static func activationPlan(
+        for target: FocusedCodexProfileLabel,
+        snapshots: [RunningCodexProcessSnapshot],
+        profiles: [Profile]
+    ) -> CodexAppActivationPlan {
+        guard let selected = snapshots.first(where: { resolve(snapshot: $0.process, profiles: profiles) == target }) else {
+            return .launch
+        }
+        return selected.hasVisibleWindow
+            ? .activate(pid: selected.process.pid)
+            : .reopen(pid: selected.process.pid)
     }
 
     public static func shouldReadProcessArguments(
@@ -109,22 +147,14 @@ public enum FocusedCodexProfileResolver {
     }
 
     private static func isCodexApp(_ snapshot: FocusedCodexProcessSnapshot) -> Bool {
-        if let name = snapshot.localizedName?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(),
-           name == "codex" || name.hasPrefix("codex ") {
-            return true
-        }
+        let name = snapshot.localizedName?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let bundleIdentifier = snapshot.bundleIdentifier?.lowercased()
+        let executablePath = snapshot.executablePath.map { normalizedPath($0).lowercased() }
+        let isMainName = name == "codex"
+        let isMainBundle = bundleIdentifier == "com.openai.codex"
+        let isMainExecutable = executablePath?.hasSuffix("/codex.app/contents/macos/codex") == true
 
-        if let executablePath = snapshot.executablePath?.lowercased(),
-           executablePath.contains("/codex.app/") || executablePath.hasSuffix("/codex.app") {
-            return true
-        }
-
-        if let bundleIdentifier = snapshot.bundleIdentifier?.lowercased(),
-           bundleIdentifier.split(separator: ".").contains("codex") {
-            return true
-        }
-
-        return false
+        return (isMainBundle && (isMainName || isMainExecutable)) || (isMainName && isMainExecutable)
     }
 
     private static func profileCandidatePaths(snapshot: FocusedCodexProcessSnapshot) -> [String] {

@@ -45,6 +45,10 @@ public struct Launcher {
         return arguments
     }
 
+    public func defaultDesktopReopenArguments(app: URL = URL(filePath: "/Applications/Codex.app")) -> [String] {
+        ["-a", app.path]
+    }
+
     public func defaultDesktopLaunchEnvironment(
         environment: [String: String] = ProcessInfo.processInfo.environment
     ) -> [String: String] {
@@ -61,6 +65,14 @@ public struct Launcher {
         try run(
             "/usr/bin/open",
             arguments: defaultDesktopOpenArguments(),
+            environment: defaultDesktopLaunchEnvironment()
+        )
+    }
+
+    public func reopenDefaultDesktop() throws {
+        try run(
+            "/usr/bin/open",
+            arguments: defaultDesktopReopenArguments(),
             environment: defaultDesktopLaunchEnvironment()
         )
     }

@@ -1,4 +1,5 @@
 import AppKit
+import Carbon
 import CodexNCore
 
 @MainActor
@@ -396,12 +397,132 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     @objc private func openDefaultCodexApp() {
-        runMenuAction { try launcher.openDefaultDesktop() }
+        runMenuAction {
+            if !(try focusOrReopenRunningCodexApp(for: .defaultCodex, reopen: { try launcher.reopenDefaultDesktop() })) {
+                try launcher.openDefaultDesktop()
+            }
+        }
     }
 
     @objc private func openDesktop(_ sender: NSMenuItem) {
         withProfile(sender) { profile in
-            try launcher.openDesktop(profile: profile)
+            if !(try focusOrReopenRunningCodexApp(for: .profile(id: profile.id), reopen: { try launcher.openDesktop(profile: profile) })) {
+                try launcher.openDesktop(profile: profile)
+            }
+        }
+    }
+
+    private func focusOrReopenRunningCodexApp(for target: FocusedCodexProfileLabel, reopen: () throws -> Void) throws -> Bool {
+        let profiles = (try? store.listProfiles()) ?? []
+        let candidates = runningCodexApplications()
+        let plan = FocusedCodexProfileResolver.activationPlan(
+            for: target,
+            snapshots: candidates.map(\.snapshot),
+            profiles: profiles
+        )
+        switch plan {
+        case .launch:
+            return false
+        case .activate(let pid):
+            return activateRunningApplication(pid: pid, candidates: candidates)
+        case .reopen(let pid):
+            do {
+                try reopenRunningApplication(pid: pid)
+            } catch {
+                try reopen()
+            }
+            _ = activateRunningApplication(pid: pid, candidates: candidates)
+            scheduleVisibleCodexActivation(for: target)
+            return true
+        }
+    }
+
+    private func reopenRunningApplication(pid: Int32) throws {
+        let target = NSAppleEventDescriptor(processIdentifier: pid)
+        let event = NSAppleEventDescriptor(
+            eventClass: AEEventClass(kCoreEventClass),
+            eventID: AEEventID(kAEReopenApplication),
+            targetDescriptor: target,
+            returnID: AEReturnID(kAutoGenerateReturnID),
+            transactionID: AETransactionID(kAnyTransactionID)
+        )
+        _ = try event.sendEvent(options: [.noReply], timeout: 1)
+    }
+
+    private func activateVisibleCodexApp(for target: FocusedCodexProfileLabel) {
+        let profiles = (try? store.listProfiles()) ?? []
+        let candidates = runningCodexApplications().filter(\.snapshot.hasVisibleWindow)
+        let selected = FocusedCodexProfileResolver.matchingCodexProcessSnapshot(
+            for: target,
+            snapshots: candidates.map(\.snapshot.process),
+            profiles: profiles
+        )
+        guard let selected,
+              let application = candidates.first(where: { $0.snapshot.process.pid == selected.pid })?.application else { return }
+        _ = application.activate(options: [.activateAllWindows])
+    }
+
+    private func scheduleVisibleCodexActivation(for target: FocusedCodexProfileLabel) {
+        [0.35, 1.0].forEach { delay in
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+                self?.activateVisibleCodexApp(for: target)
+            }
+        }
+    }
+
+    private func activateRunningApplication(
+        pid: Int32,
+        candidates: [(application: NSRunningApplication, snapshot: RunningCodexProcessSnapshot)]
+    ) -> Bool {
+        guard let application = candidates.first(where: { $0.snapshot.process.pid == pid })?.application else { return false }
+        return application.activate(options: [.activateAllWindows])
+    }
+
+    private func runningCodexApplications() -> [(application: NSRunningApplication, snapshot: RunningCodexProcessSnapshot)] {
+        NSWorkspace.shared.runningApplications.compactMap { application in
+            let shouldReadProcessArguments = FocusedCodexProfileResolver.shouldReadProcessArguments(
+                bundleIdentifier: application.bundleIdentifier,
+                localizedName: application.localizedName,
+                executablePath: application.executableURL?.path
+            )
+            guard shouldReadProcessArguments else { return nil }
+
+            let processArguments = FocusedCodexProcessArgumentsReader.read(pid: application.processIdentifier)
+            let snapshot = FocusedCodexProcessSnapshot(
+                pid: application.processIdentifier,
+                bundleIdentifier: application.bundleIdentifier,
+                localizedName: application.localizedName,
+                executablePath: application.executableURL?.path,
+                arguments: processArguments.arguments,
+                environment: processArguments.environment
+            )
+            return (
+                application,
+                RunningCodexProcessSnapshot(
+                    process: snapshot,
+                    hasVisibleWindow: hasVisibleWindow(pid: application.processIdentifier)
+                )
+            )
+        }
+    }
+
+    private func hasVisibleWindow(pid: Int32) -> Bool {
+        guard let windows = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]] else {
+            return true
+        }
+        return windows.contains { window in
+            guard let ownerPID = window[kCGWindowOwnerPID as String] as? NSNumber,
+                  ownerPID.int32Value == pid,
+                  let layer = window[kCGWindowLayer as String] as? NSNumber,
+                  layer.intValue == 0 else {
+                return false
+            }
+            guard let bounds = window[kCGWindowBounds as String] as? [String: Any],
+                  let width = bounds["Width"] as? NSNumber,
+                  let height = bounds["Height"] as? NSNumber else {
+                return true
+            }
+            return width.doubleValue > 1 && height.doubleValue > 1
         }
     }
 

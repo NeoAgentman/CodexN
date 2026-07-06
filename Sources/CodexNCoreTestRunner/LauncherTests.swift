@@ -89,6 +89,14 @@ extension TestRunner {
         try expect(!desktopArguments.contains(where: { $0.contains("user-data-dir") }), "default desktop should not include user-data-dir")
     }
 
+    static func buildsDefaultReopenCommandsWithoutNewInstanceFlag() throws {
+        let launcher = Launcher()
+        let desktopArguments = launcher.defaultDesktopReopenArguments()
+
+        try expect(desktopArguments == ["-a", "/Applications/Codex.app"], "default reopen should use macOS reopen semantics")
+        try expect(!desktopArguments.contains("-n"), "default reopen should not request a new application instance")
+    }
+
     static func stripsCodexEnvironmentWhenLaunchingDefaultApp() throws {
         let launcher = Launcher()
         let environment = launcher.defaultDesktopLaunchEnvironment(environment: [
