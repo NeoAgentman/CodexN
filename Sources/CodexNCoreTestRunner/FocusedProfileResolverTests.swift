@@ -62,6 +62,124 @@ extension TestRunner {
         try expect(label == .defaultCodex, "unmatched Codex app should be treated as Default")
     }
 
+    static func selectsRunningManagedProfileToActivate() throws {
+        let root = try temporaryDirectory()
+        let store = ProfileStore(root: root)
+        let work = try store.createProfile(id: "work", name: "Work")
+        let personal = try store.createProfile(id: "personal", name: "Personal")
+        let snapshots = [
+            codexProcessSnapshot(pid: 10, environment: ["CODEXN_PROFILE_ID": "work"]),
+            codexProcessSnapshot(pid: 11, environment: ["CODEXN_PROFILE_ID": "personal"]),
+            codexProcessSnapshot(pid: 12)
+        ]
+
+        let selected = FocusedCodexProfileResolver.matchingCodexProcessSnapshot(
+            for: .profile(id: "personal"),
+            snapshots: snapshots,
+            profiles: [work, personal]
+        )
+
+        try expect(selected?.pid == 11, "managed profile activation should select the matching running Codex app")
+    }
+
+    static func selectsRunningDefaultCodexToActivate() throws {
+        let root = try temporaryDirectory()
+        let store = ProfileStore(root: root)
+        let work = try store.createProfile(id: "work", name: "Work")
+        let snapshots = [
+            codexProcessSnapshot(pid: 20, environment: ["CODEXN_PROFILE_ID": "work"]),
+            codexProcessSnapshot(pid: 21, arguments: ["--user-data-dir=/tmp/default-codex"])
+        ]
+
+        let selected = FocusedCodexProfileResolver.matchingCodexProcessSnapshot(
+            for: .defaultCodex,
+            snapshots: snapshots,
+            profiles: [work]
+        )
+
+        try expect(selected?.pid == 21, "default activation should ignore managed profile apps and select Default Codex")
+    }
+
+    static func skipsCodexHelperProcessesWhenSelectingDefaultToActivate() throws {
+        let helper = FocusedCodexProcessSnapshot(
+            pid: 20,
+            bundleIdentifier: nil,
+            localizedName: "bare-modifier-monitor",
+            executablePath: "/Applications/Codex.app/Contents/Resources/native/bare-modifier-monitor",
+            arguments: [],
+            environment: [:]
+        )
+        let service = FocusedCodexProcessSnapshot(
+            pid: 21,
+            bundleIdentifier: "com.openai.codex.helper",
+            localizedName: "Codex (Service)",
+            executablePath: "/Applications/Codex.app/Contents/Frameworks/Codex Framework.framework/Versions/149.0.7827.197/Helpers/Codex (Service).app/Contents/MacOS/Codex (Service)",
+            arguments: [],
+            environment: [:]
+        )
+        let computerUse = FocusedCodexProcessSnapshot(
+            pid: 22,
+            bundleIdentifier: "com.openai.sky.CUAService",
+            localizedName: "Codex Computer Use",
+            executablePath: "/Users/example/.codex/computer-use/Codex Computer Use.app/Contents/MacOS/SkyComputerUseService",
+            arguments: [],
+            environment: [:]
+        )
+        let defaultCodex = codexProcessSnapshot(pid: 23)
+
+        let selected = FocusedCodexProfileResolver.matchingCodexProcessSnapshot(
+            for: .defaultCodex,
+            snapshots: [helper, service, computerUse, defaultCodex],
+            profiles: []
+        )
+
+        try expect(selected?.pid == 23, "default activation should select the main Codex app, not helper processes")
+    }
+
+    static func plansToReopenRunningCodexWhenMatchedAppHasNoVisibleWindow() throws {
+        let plan = FocusedCodexProfileResolver.activationPlan(
+            for: .defaultCodex,
+            snapshots: [
+                RunningCodexProcessSnapshot(process: codexProcessSnapshot(pid: 31), hasVisibleWindow: false)
+            ],
+            profiles: []
+        )
+
+        try expect(plan == .reopen(pid: 31), "matched running Codex without a visible window should be reopened")
+    }
+
+    static func plansToActivateRunningCodexWhenMatchedAppHasVisibleWindow() throws {
+        let plan = FocusedCodexProfileResolver.activationPlan(
+            for: .profile(id: "work"),
+            snapshots: [
+                RunningCodexProcessSnapshot(
+                    process: codexProcessSnapshot(pid: 32, environment: ["CODEXN_PROFILE_ID": "work"]),
+                    hasVisibleWindow: true
+                )
+            ],
+            profiles: []
+        )
+
+        try expect(plan == .activate(pid: 32), "matched running Codex with a visible window should be activated")
+    }
+
+    static func returnsNilWhenNoRunningCodexProcessMatchesActivationTarget() throws {
+        let root = try temporaryDirectory()
+        let store = ProfileStore(root: root)
+        let profile = try store.createProfile(id: "work", name: "Work")
+        let snapshots = [
+            codexProcessSnapshot(pid: 30, environment: ["CODEXN_PROFILE_ID": "work"])
+        ]
+
+        let selected = FocusedCodexProfileResolver.matchingCodexProcessSnapshot(
+            for: .profile(id: "missing"),
+            snapshots: snapshots,
+            profiles: [profile]
+        )
+
+        try expect(selected == nil, "activation should fall back to launching when no running Codex process matches")
+    }
+
     static func ignoresNonCodexForegroundApps() throws {
         let root = try temporaryDirectory()
         let store = ProfileStore(root: root)
@@ -115,6 +233,30 @@ extension TestRunner {
             ),
             "Codex apps should require process argument reads"
         )
+        try expect(
+            !FocusedCodexProfileResolver.shouldReadProcessArguments(
+                bundleIdentifier: nil,
+                localizedName: "bare-modifier-monitor",
+                executablePath: "/Applications/Codex.app/Contents/Resources/native/bare-modifier-monitor"
+            ),
+            "Codex resource helper processes should not require process argument reads"
+        )
+        try expect(
+            !FocusedCodexProfileResolver.shouldReadProcessArguments(
+                bundleIdentifier: "com.openai.codex.helper",
+                localizedName: "Codex (Service)",
+                executablePath: "/Applications/Codex.app/Contents/Frameworks/Codex Framework.framework/Versions/149.0.7827.197/Helpers/Codex (Service).app/Contents/MacOS/Codex (Service)"
+            ),
+            "Codex service helper processes should not require process argument reads"
+        )
+        try expect(
+            !FocusedCodexProfileResolver.shouldReadProcessArguments(
+                bundleIdentifier: "com.openai.sky.CUAService",
+                localizedName: "Codex Computer Use",
+                executablePath: "/Users/example/.codex/computer-use/Codex Computer Use.app/Contents/MacOS/SkyComputerUseService"
+            ),
+            "Codex Computer Use should not be treated as the Codex desktop app"
+        )
     }
 
     static func usesTenSecondFocusedProfileFallbackInterval() throws {
@@ -154,11 +296,12 @@ extension TestRunner {
     }
 
     static func codexProcessSnapshot(
+        pid: Int32 = 42,
         arguments: [String] = [],
         environment: [String: String] = [:]
     ) -> FocusedCodexProcessSnapshot {
         FocusedCodexProcessSnapshot(
-            pid: 42,
+            pid: pid,
             bundleIdentifier: "com.openai.codex",
             localizedName: "Codex",
             executablePath: "/Applications/Codex.app/Contents/MacOS/Codex",
