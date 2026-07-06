@@ -13,6 +13,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var usageRefreshTimer: Timer?
     private var usageRefreshTask: Task<Error?, Never>?
     private var focusedProfileTimer: Timer?
+    private var deferredFocusedProfileUpdateTimer: Timer?
     private var workspaceActivationObserver: NSObjectProtocol?
     private var workspaceTerminationObserver: NSObjectProtocol?
     private var focusedProfileLabel: FocusedCodexProfileLabel = .none
@@ -20,10 +21,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var displayedStatusTitle: MenuBarUsageTitle?
 
     private static let usageRefreshInterval: TimeInterval = 30 * 60
+    private static let statusItemAutosaveName = "codexn-main"
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+        item.autosaveName = Self.statusItemAutosaveName
         if let button = item.button {
             configureStatusButton(button)
         }
@@ -43,11 +46,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         usageRefreshTimer?.invalidate()
         usageRefreshTask?.cancel()
         focusedProfileTimer?.invalidate()
+        deferredFocusedProfileUpdateTimer?.invalidate()
         stopFocusedProfileTitleObservers()
     }
 
     func menuWillOpen(_ menu: NSMenu) {
         reloadUsageSnapshotFromCache()
+        deferredFocusedProfileUpdateTimer?.invalidate()
+        deferredFocusedProfileUpdateTimer = nil
         updateFocusedProfileTitle()
         rebuildMenu()
     }
@@ -212,7 +218,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         focusedProfileTimer?.invalidate()
         focusedProfileTimer = Timer.scheduledTimer(withTimeInterval: FocusedCodexProfileResolver.fallbackRefreshInterval, repeats: true) { [weak self] _ in
             Task { @MainActor [weak self] in
-                self?.updateFocusedProfileTitle()
+                self?.scheduleFocusedProfileTitleUpdate(reason: .fallbackTimer)
             }
         }
 
@@ -223,7 +229,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             queue: .main
         ) { [weak self] _ in
             Task { @MainActor [weak self] in
-                self?.updateFocusedProfileTitle()
+                self?.scheduleFocusedProfileTitleUpdate(reason: .workspaceActivation)
             }
         }
         workspaceTerminationObserver = NSWorkspace.shared.notificationCenter.addObserver(
@@ -232,7 +238,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             queue: .main
         ) { [weak self] _ in
             Task { @MainActor [weak self] in
-                self?.updateFocusedProfileTitle()
+                self?.scheduleFocusedProfileTitleUpdate(reason: .workspaceTermination)
             }
         }
     }
@@ -245,6 +251,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         if let workspaceTerminationObserver {
             NSWorkspace.shared.notificationCenter.removeObserver(workspaceTerminationObserver)
             self.workspaceTerminationObserver = nil
+        }
+    }
+
+    private func scheduleFocusedProfileTitleUpdate(reason: MenuBarTitleUpdateReason) {
+        deferredFocusedProfileUpdateTimer?.invalidate()
+        deferredFocusedProfileUpdateTimer = nil
+
+        let delay = MenuBarTitleUpdatePolicy.delay(for: reason)
+        guard delay > 0 else {
+            updateFocusedProfileTitle()
+            return
+        }
+
+        deferredFocusedProfileUpdateTimer = Timer.scheduledTimer(withTimeInterval: delay, repeats: false) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.deferredFocusedProfileUpdateTimer = nil
+                self?.updateFocusedProfileTitle()
+            }
         }
     }
 

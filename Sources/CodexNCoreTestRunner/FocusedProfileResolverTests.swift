@@ -259,6 +259,25 @@ extension TestRunner {
         )
     }
 
+    static func delaysWorkspaceDrivenMenuBarTitleUpdates() throws {
+        try expect(
+            MenuBarTitleUpdatePolicy.delay(for: .workspaceActivation) > 0,
+            "workspace activation should not synchronously resize the status item title"
+        )
+        try expect(
+            MenuBarTitleUpdatePolicy.delay(for: .workspaceTermination) > 0,
+            "workspace termination should not synchronously resize the status item title"
+        )
+        try expect(
+            MenuBarTitleUpdatePolicy.delay(for: .fallbackTimer) == 0,
+            "fallback polling can refresh the status item title immediately"
+        )
+        try expect(
+            MenuBarTitleUpdatePolicy.delay(for: .menuWillOpen) == 0,
+            "menu opening should refresh the title immediately after AppKit starts menu tracking"
+        )
+    }
+
     static func usesTenSecondFocusedProfileFallbackInterval() throws {
         try expect(
             FocusedCodexProfileResolver.fallbackRefreshInterval == 10,
