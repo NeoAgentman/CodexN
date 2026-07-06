@@ -30,6 +30,7 @@ struct TestRunner {
         try formatsFocusedProfileMenuTitles()
         try formatsFocusedProfileMenuBarText()
         try identifiesFocusedProfileTitleHighlightSegment()
+        try formatsMenuBarUsageTitles()
         try skipsProcessArgumentReadsForNonCodexApps()
         try usesTenSecondFocusedProfileFallbackInterval()
         try parsesKernelProcessArgumentsAndEnvironment()

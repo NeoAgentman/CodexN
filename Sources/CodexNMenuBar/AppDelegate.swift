@@ -15,6 +15,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var workspaceActivationObserver: NSObjectProtocol?
     private var workspaceTerminationObserver: NSObjectProtocol?
     private var focusedProfileLabel: FocusedCodexProfileLabel = .none
+    private var usageSnapshot: CodexUsageSnapshot?
+    private var displayedStatusTitle: MenuBarUsageTitle?
 
     private static let usageRefreshInterval: TimeInterval = 30 * 60
 
@@ -30,6 +32,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.delegate = self
         statusMenu = menu
         statusItem?.menu = menu
+        reloadUsageSnapshotFromCache()
         rebuildMenu()
         startUsageRefreshLoop()
         startFocusedProfileTitleUpdates()
@@ -43,6 +46,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     func menuWillOpen(_ menu: NSMenu) {
+        reloadUsageSnapshotFromCache()
         updateFocusedProfileTitle()
         rebuildMenu()
     }
@@ -128,8 +132,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     private func addUsageMenuItem(to menu: NSMenu) {
-        let snapshot = (try? usageCache.read()) ?? nil
-        let chart = TokenUsageMenuChart(snapshot: snapshot)
+        let chart = TokenUsageMenuChart(snapshot: usageSnapshot)
         let hosting = MenuHostingView(rootView: chart)
         let width: CGFloat = 300
         hosting.frame = NSRect(x: 0, y: 0, width: width, height: 1)
@@ -248,21 +251,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let snapshot = focusedCodexProcessSnapshot()
         let profiles = (try? store.listProfiles()) ?? []
         let label = FocusedCodexProfileResolver.resolve(snapshot: snapshot, profiles: profiles)
-        guard label != focusedProfileLabel else { return }
         focusedProfileLabel = label
         applyStatusTitle(for: label)
     }
 
     private func applyStatusTitle(for label: FocusedCodexProfileLabel) {
-        let title = FocusedCodexProfileResolver.menuBarProfileText(for: label)
-        guard let highlightedSegment = FocusedCodexProfileResolver.menuBarHighlightedSegment(for: label),
-              let range = title.range(of: highlightedSegment, options: .backwards) else {
-            statusItem?.button?.attributedTitle = NSAttributedString(string: title)
+        let title = MenuBarUsageTitleFormatter.title(for: label, snapshot: usageSnapshot)
+        guard title != displayedStatusTitle else { return }
+        displayedStatusTitle = title
+
+        guard let highlightedSegment = title.highlightedSegment,
+              let range = title.text.range(of: highlightedSegment, options: .backwards) else {
+            statusItem?.button?.attributedTitle = NSAttributedString(string: title.text)
             return
         }
 
         let attributedTitle = NSMutableAttributedString(
-            string: title,
+            string: title.text,
             attributes: [
                 .font: NSFont.menuBarFont(ofSize: 0),
                 .foregroundColor: NSColor.labelColor
@@ -273,9 +278,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 .font: NSFont.systemFont(ofSize: NSFont.systemFontSize, weight: .semibold),
                 .foregroundColor: NSColor.controlAccentColor
             ],
-            range: NSRange(range, in: title)
+            range: NSRange(range, in: title.text)
         )
         statusItem?.button?.attributedTitle = attributedTitle
+    }
+
+    private func reloadUsageSnapshotFromCache() {
+        usageSnapshot = (try? usageCache.read()) ?? nil
     }
 
     private func configureStatusButton(_ button: NSStatusBarButton) {
@@ -346,7 +355,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             guard let self else { return }
             self.usageRefreshTask = nil
             if error == nil {
+                self.reloadUsageSnapshotFromCache()
                 self.rebuildMenu()
+                self.applyStatusTitle(for: self.focusedProfileLabel)
             }
         }
     }
