@@ -46,6 +46,7 @@ struct TestRunner {
         try scansRecentlyModifiedOlderCodexSessionPartitionsOnly()
         try computesUsageListBarWidths()
         try formatsTokenUsageValues()
+        try recognizesSettingsWindowCloseShortcut()
         try writesAndReadsUsageCache()
         print("CodexNCoreTestRunner: all tests passed")
     }

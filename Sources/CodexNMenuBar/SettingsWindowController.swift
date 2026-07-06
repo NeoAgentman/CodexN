@@ -2,6 +2,20 @@ import AppKit
 import CodexNCore
 import SwiftUI
 
+private final class SettingsWindow: NSWindow {
+    override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        let relevantModifiers = event.modifierFlags.intersection([.command, .option, .control, .shift])
+        if SettingsWindowShortcutPolicy.shouldCloseWindow(
+            charactersIgnoringModifiers: event.charactersIgnoringModifiers,
+            hasCommandOnlyModifier: relevantModifiers == .command
+        ) {
+            performClose(nil)
+            return true
+        }
+        return super.performKeyEquivalent(with: event)
+    }
+}
+
 @MainActor
 final class SettingsWindowController: NSWindowController, NSWindowDelegate {
     var onClose: (() -> Void)?
@@ -19,7 +33,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
             onComplete: onComplete
         )
         self.hosting = NSHostingController(rootView: content)
-        let window = NSWindow(
+        let window = SettingsWindow(
             contentRect: NSRect(x: 0, y: 0, width: 780, height: 520),
             styleMask: [.titled, .closable, .miniaturizable],
             backing: .buffered,
