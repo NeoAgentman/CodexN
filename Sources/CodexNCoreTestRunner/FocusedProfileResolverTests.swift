@@ -62,6 +62,17 @@ extension TestRunner {
         try expect(label == .defaultCodex, "unmatched Codex app should be treated as Default")
     }
 
+    static func resolvesDefaultCodexForChatGPTCodexAppWithoutProfileMatch() throws {
+        let root = try temporaryDirectory()
+        let store = ProfileStore(root: root)
+        let profile = try store.createProfile(id: "work", name: "Work")
+        let snapshot = chatGPTCodexProcessSnapshot(arguments: ["--user-data-dir=/tmp/elsewhere"])
+
+        let label = FocusedCodexProfileResolver.resolve(snapshot: snapshot, profiles: [profile])
+
+        try expect(label == .defaultCodex, "ChatGPT.app with Codex bundle id should be treated as Default Codex")
+    }
+
     static func selectsRunningManagedProfileToActivate() throws {
         let root = try temporaryDirectory()
         let store = ProfileStore(root: root)
@@ -234,6 +245,14 @@ extension TestRunner {
             "Codex apps should require process argument reads"
         )
         try expect(
+            FocusedCodexProfileResolver.shouldReadProcessArguments(
+                bundleIdentifier: "com.openai.codex",
+                localizedName: "ChatGPT",
+                executablePath: "/Applications/ChatGPT.app/Contents/MacOS/ChatGPT"
+            ),
+            "ChatGPT.app Codex bundle should require process argument reads"
+        )
+        try expect(
             !FocusedCodexProfileResolver.shouldReadProcessArguments(
                 bundleIdentifier: nil,
                 localizedName: "bare-modifier-monitor",
@@ -324,6 +343,21 @@ extension TestRunner {
             bundleIdentifier: "com.openai.codex",
             localizedName: "Codex",
             executablePath: "/Applications/Codex.app/Contents/MacOS/Codex",
+            arguments: arguments,
+            environment: environment
+        )
+    }
+
+    static func chatGPTCodexProcessSnapshot(
+        pid: Int32 = 43,
+        arguments: [String] = [],
+        environment: [String: String] = [:]
+    ) -> FocusedCodexProcessSnapshot {
+        FocusedCodexProcessSnapshot(
+            pid: pid,
+            bundleIdentifier: "com.openai.codex",
+            localizedName: "ChatGPT",
+            executablePath: "/Applications/ChatGPT.app/Contents/MacOS/ChatGPT",
             arguments: arguments,
             environment: environment
         )

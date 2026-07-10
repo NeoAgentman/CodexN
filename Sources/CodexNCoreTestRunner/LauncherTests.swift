@@ -28,6 +28,23 @@ extension TestRunner {
         )
     }
 
+    static func fallsBackToChatGPTCodexBundleWhenLegacyCodexAppIsMissing() throws {
+        let root = try temporaryDirectory()
+        let legacyCodex = root.appending(path: "Codex.app")
+        let chatGPTCodex = root.appending(path: "ChatGPT.app")
+        try writeAppBundle(chatGPTCodex, bundleIdentifier: "com.openai.codex")
+
+        let resolver = CodexDesktopAppResolver(candidateURLs: [legacyCodex, chatGPTCodex])
+        let store = ProfileStore(root: root)
+        var profile = try store.createProfile(id: "work", name: "Work")
+        profile.appBundle = legacyCodex
+        let launcher = Launcher(appResolver: resolver)
+
+        let desktopArguments = launcher.desktopOpenArguments(profile: profile)
+
+        try expect(desktopArguments.contains(chatGPTCodex.path), "missing legacy Codex.app should fall back to ChatGPT.app Codex bundle")
+    }
+
     static func injectsAPIKeyEnvironmentIntoLaunchCommands() throws {
         let root = try temporaryDirectory()
         let store = ProfileStore(root: root)
@@ -82,7 +99,8 @@ extension TestRunner {
 
     static func buildsDefaultLaunchCommandsWithoutProfileIsolation() throws {
         let launcher = Launcher()
-        let desktopArguments = launcher.defaultDesktopOpenArguments()
+        let legacyCodex = URL(filePath: "/Applications/Codex.app")
+        let desktopArguments = launcher.defaultDesktopOpenArguments(app: legacyCodex)
 
         try expect(desktopArguments == ["-n", "/Applications/Codex.app"], "default desktop should not include profile env")
         try expect(!desktopArguments.contains(where: { $0.contains("CODEX_HOME") }), "default desktop should not include CODEX_HOME")
@@ -91,7 +109,8 @@ extension TestRunner {
 
     static func buildsDefaultReopenCommandsWithoutNewInstanceFlag() throws {
         let launcher = Launcher()
-        let desktopArguments = launcher.defaultDesktopReopenArguments()
+        let legacyCodex = URL(filePath: "/Applications/Codex.app")
+        let desktopArguments = launcher.defaultDesktopReopenArguments(app: legacyCodex)
 
         try expect(desktopArguments == ["-a", "/Applications/Codex.app"], "default reopen should use macOS reopen semantics")
         try expect(!desktopArguments.contains("-n"), "default reopen should not request a new application instance")
@@ -116,5 +135,21 @@ extension TestRunner {
         try expect(environment["CODEX_INTERNAL_ORIGINATOR_OVERRIDE"] == nil, "default launch should remove Codex internal env")
         try expect(environment["CODEXN_API_KEY_ZL_ABC"] == nil, "default launch should remove CodexN API key env")
         try expect(environment["CODEXN_ROOT"] == nil, "default launch should remove CodexN root env")
+    }
+
+    static func writeAppBundle(_ url: URL, bundleIdentifier: String) throws {
+        let contents = url.appending(path: "Contents")
+        try FileManager.default.createDirectory(at: contents, withIntermediateDirectories: true)
+        let plist = """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+        <plist version="1.0">
+        <dict>
+            <key>CFBundleIdentifier</key>
+            <string>\(bundleIdentifier)</string>
+        </dict>
+        </plist>
+        """
+        try plist.write(to: contents.appending(path: "Info.plist"), atomically: true, encoding: .utf8)
     }
 }

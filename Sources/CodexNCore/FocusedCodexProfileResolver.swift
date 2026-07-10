@@ -151,10 +151,13 @@ public enum FocusedCodexProfileResolver {
         let bundleIdentifier = snapshot.bundleIdentifier?.lowercased()
         let executablePath = snapshot.executablePath.map { normalizedPath($0).lowercased() }
         let isMainName = name == "codex"
+        let isChatGPTCodexName = name == "chatgpt"
         let isMainBundle = bundleIdentifier == "com.openai.codex"
         let isMainExecutable = executablePath?.hasSuffix("/codex.app/contents/macos/codex") == true
+        let isChatGPTCodexExecutable = executablePath?.hasSuffix("/chatgpt.app/contents/macos/chatgpt") == true
 
-        return (isMainBundle && (isMainName || isMainExecutable)) || (isMainName && isMainExecutable)
+        return (isMainBundle && (isMainName || isMainExecutable || isChatGPTCodexName || isChatGPTCodexExecutable))
+            || (isMainName && isMainExecutable)
     }
 
     private static func profileCandidatePaths(snapshot: FocusedCodexProcessSnapshot) -> [String] {

@@ -9,11 +9,17 @@ public final class ProfileStore {
     public let root: URL
     private let fileManager: FileManager
     private let storeURL: URL
+    private let appResolver: CodexDesktopAppResolver
 
-    public init(root: URL = ProfileStore.defaultRoot(), fileManager: FileManager = .default) {
+    public init(
+        root: URL = ProfileStore.defaultRoot(),
+        fileManager: FileManager = .default,
+        appResolver: CodexDesktopAppResolver = CodexDesktopAppResolver()
+    ) {
         self.root = root
         self.fileManager = fileManager
         self.storeURL = root.appending(path: "profiles.json")
+        self.appResolver = appResolver
     }
 
     public static func defaultRoot(environment: [String: String] = ProcessInfo.processInfo.environment) -> URL {
@@ -194,7 +200,7 @@ public final class ProfileStore {
             codexHome: profileRoot.appending(path: "codex-home"),
             electronUserData: profileRoot.appending(path: "electron-user-data"),
             logDir: profileRoot.appending(path: "logs"),
-            appBundle: URL(filePath: "/Applications/Codex.app"),
+            appBundle: appResolver.resolvedAppBundle(),
             defaultProvider: "openai",
             apiKeyEnvName: nil,
             apiKeyValue: nil,

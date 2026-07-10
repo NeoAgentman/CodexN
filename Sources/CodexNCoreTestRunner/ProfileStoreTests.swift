@@ -20,6 +20,19 @@ extension TestRunner {
         try expect(try store.listProfiles().map(\.id) == ["work"], "store should list work")
     }
 
+    static func createsProfilesWithResolvedCodexAppBundle() throws {
+        let root = try temporaryDirectory()
+        let legacyCodex = root.appending(path: "Codex.app")
+        let chatGPTCodex = root.appending(path: "ChatGPT.app")
+        try writeAppBundle(chatGPTCodex, bundleIdentifier: "com.openai.codex")
+        let resolver = CodexDesktopAppResolver(candidateURLs: [legacyCodex, chatGPTCodex])
+        let store = ProfileStore(root: root, appResolver: resolver)
+
+        let profile = try store.createProfile(id: "work", name: "Work")
+
+        try expect(profile.appBundle == chatGPTCodex, "new profiles should store the resolved Codex desktop app bundle")
+    }
+
     static func refusesToCreateOverNonEmptyProfileDirectory() throws {
         let root = try temporaryDirectory()
         let staleHome = root.appending(path: "work/codex-home")

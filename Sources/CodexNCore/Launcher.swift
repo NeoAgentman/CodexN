@@ -12,10 +12,14 @@ public enum LauncherError: Error, CustomStringConvertible {
 }
 
 public struct Launcher {
-    public init() {}
+    private let appResolver: CodexDesktopAppResolver
+
+    public init(appResolver: CodexDesktopAppResolver = CodexDesktopAppResolver()) {
+        self.appResolver = appResolver
+    }
 
     public func desktopOpenArguments(profile: Profile, project: URL? = nil, app: URL? = nil) -> [String] {
-        let appURL = app ?? profile.appBundle
+        let appURL = app ?? appResolver.resolvedAppBundle(preferred: profile.appBundle)
         var arguments = [
             "-n",
             appURL.path,
@@ -37,16 +41,18 @@ public struct Launcher {
         return arguments
     }
 
-    public func defaultDesktopOpenArguments(project: URL? = nil, app: URL = URL(filePath: "/Applications/Codex.app")) -> [String] {
-        var arguments = ["-n", app.path]
+    public func defaultDesktopOpenArguments(project: URL? = nil, app: URL? = nil) -> [String] {
+        let appURL = app ?? appResolver.resolvedAppBundle()
+        var arguments = ["-n", appURL.path]
         if let project {
             arguments.append(contentsOf: ["--args", project.path])
         }
         return arguments
     }
 
-    public func defaultDesktopReopenArguments(app: URL = URL(filePath: "/Applications/Codex.app")) -> [String] {
-        ["-a", app.path]
+    public func defaultDesktopReopenArguments(app: URL? = nil) -> [String] {
+        let appURL = app ?? appResolver.resolvedAppBundle()
+        return ["-a", appURL.path]
     }
 
     public func defaultDesktopLaunchEnvironment(

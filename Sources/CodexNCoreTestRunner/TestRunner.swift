@@ -5,6 +5,7 @@ import CodexNCore
 struct TestRunner {
     static func main() throws {
         try createsEmptyProfileDirectoriesWithoutCodexConfig()
+        try createsProfilesWithResolvedCodexAppBundle()
         try refusesToCreateOverNonEmptyProfileDirectory()
         try rejectsProfileIDsWithPathLikeCharacters()
         try importsDefaultCodexHomeAndElectronData()
@@ -16,6 +17,7 @@ struct TestRunner {
         try protectsProfileRegistryAndDirectoriesWithOwnerOnlyPermissions()
         try tightensExistingProfileRegistryPermissions()
         try buildsLaunchCommandsWithProfileIsolation()
+        try fallsBackToChatGPTCodexBundleWhenLegacyCodexAppIsMissing()
         try injectsAPIKeyEnvironmentIntoLaunchCommands()
         try readsLegacyProfileRegistry()
         try buildsDefaultLaunchCommandsWithoutProfileIsolation()
@@ -27,6 +29,7 @@ struct TestRunner {
         try resolvesFocusedManagedProfileFromElectronUserDataEnvironment()
         try resolvesFocusedManagedProfileFromUserDataDirArgument()
         try resolvesDefaultCodexForCodexAppWithoutProfileMatch()
+        try resolvesDefaultCodexForChatGPTCodexAppWithoutProfileMatch()
         try selectsRunningManagedProfileToActivate()
         try selectsRunningDefaultCodexToActivate()
         try skipsCodexHelperProcessesWhenSelectingDefaultToActivate()
